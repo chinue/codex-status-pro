@@ -122,8 +122,14 @@ export class CodexLocalParser implements ILocalUsageProvider {
   }
 
   async getRateLimits(): Promise<RateLimits | null> {
-    // Re-scan to pick up latest rate_limits from recent JSONL lines
-    await this.scanSessions();
+    // Only scan active sessions (not archived) to avoid stale rate_limits from
+    // old archived files overwriting the latest value.
+    // Reset latestRateLimits so we start fresh and pick the newest resets_at.
+    this.latestRateLimits = null;
+    const files = await this.scanDir(SESSIONS_DIR);
+    for (const filePath of files) {
+      await this.updateFileState(filePath);
+    }
     return this.latestRateLimits;
   }
 
@@ -246,7 +252,10 @@ export class CodexLocalParser implements ILocalUsageProvider {
       // Try payload.rate_limits first, then info.rate_limits, then top-level rate_limits.
       const rateLimits = payload.rate_limits ?? payload.info?.rate_limits ?? json.rate_limits;
       if (rateLimits) {
-        this.latestRateLimits = this.normalizeRateLimits(rateLimits);
+        const normalized = this.normalizeRateLimits(rateLimits);
+        if (this.isRateLimitsNewer(normalized, this.latestRateLimits)) {
+          this.latestRateLimits = normalized;
+        }
       }
 
       const info = payload.info;
@@ -346,6 +355,7 @@ export class CodexLocalParser implements ILocalUsageProvider {
         used_percent: typeof raw.primary.used_percent === 'number' ? raw.primary.used_percent : parseFloat(raw.primary.used_percent) || 0,
         window_minutes: typeof raw.primary.window_minutes === 'number' ? raw.primary.window_minutes : parseInt(raw.primary.window_minutes, 10) || undefined,
         resets_in_seconds: typeof raw.primary.resets_in_seconds === 'number' ? raw.primary.resets_in_seconds : parseInt(raw.primary.resets_in_seconds, 10) || undefined,
+        resets_at: typeof raw.primary.resets_at === 'number' ? raw.primary.resets_at : parseInt(raw.primary.resets_at, 10) || undefined,
       };
     }
     if (raw.secondary) {
@@ -353,9 +363,24 @@ export class CodexLocalParser implements ILocalUsageProvider {
         used_percent: typeof raw.secondary.used_percent === 'number' ? raw.secondary.used_percent : parseFloat(raw.secondary.used_percent) || 0,
         window_minutes: typeof raw.secondary.window_minutes === 'number' ? raw.secondary.window_minutes : parseInt(raw.secondary.window_minutes, 10) || undefined,
         resets_in_seconds: typeof raw.secondary.resets_in_seconds === 'number' ? raw.secondary.resets_in_seconds : parseInt(raw.secondary.resets_in_seconds, 10) || undefined,
+        resets_at: typeof raw.secondary.resets_at === 'number' ? raw.secondary.resets_at : parseInt(raw.secondary.resets_at, 10) || undefined,
       };
     }
     return out;
+  }
+
+  /** Compare two RateLimits by their resets_at timestamps.
+   *  Returns true if `a` is newer than `b` (larger resets_at means more recent).
+   *  Falls back to resets_in_seconds when resets_at is unavailable.
+   */
+  private isRateLimitsNewer(a: RateLimits, b: RateLimits | null): boolean {
+    if (!b) return true;
+    const aPrimary = a.primary?.resets_at ?? a.primary?.resets_in_seconds ?? 0;
+    const bPrimary = b.primary?.resets_at ?? b.primary?.resets_in_seconds ?? 0;
+    if (aPrimary !== bPrimary) return aPrimary > bPrimary;
+    const aSecondary = a.secondary?.resets_at ?? a.secondary?.resets_in_seconds ?? 0;
+    const bSecondary = b.secondary?.resets_at ?? b.secondary?.resets_in_seconds ?? 0;
+    return aSecondary > bSecondary;
   }
 
   private extractModel(payload: any): string | undefined {

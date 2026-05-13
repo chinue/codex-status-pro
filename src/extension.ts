@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // 2. Restore cache
   const cached = await cacheService.read();
   if (cached) {
-    store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota });
+    store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota, fetchedAt: cached.fetchedAt });
     // Restore calibration
     if (cached.calibration) {
       store.dispatch({

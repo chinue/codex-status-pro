@@ -3,8 +3,9 @@ import {
   computeUtilization, buildBar, buildMiniBar, formatPercent, fmtHours, fmtDuration, calculateCost,
   calibrateTokenCapacity, calibrateWindowCostCapacity, estimateWeeklyPct, estimateWindowPct,
   fallbackWeeklyPct, fallbackWindowPct, isCalibrationValid, fmtCurrency,
+  resolveWeeklyPct, resolveWindowPct,
 } from '../src/calc';
-import { QuotaData, TokenPricing } from '../src/types';
+import { QuotaData, TokenPricing, AppState } from '../src/types';
 
 describe('calc', () => {
   describe('computeUtilization', () => {
@@ -187,6 +188,50 @@ describe('calc', () => {
       expect(isCalibrationValid(null, 1000)).to.be.false;
     });
   });
+
+  describe('resolveWeeklyPct', () => {
+    it('returns API quota value when local estimate is stale', () => {
+      const state = makeState({
+        quota: { weeklyUsedPct: 62, windowUsedPct: 89 },
+        localEstimate: { weeklyPct: 2, windowPct: 46, calibratedAt: Date.now() },
+      });
+      expect(resolveWeeklyPct(state)).to.equal(62);
+      expect(resolveWindowPct(state)).to.equal(89);
+    });
+
+    it('preserves local decimal precision when rounded value matches API', () => {
+      const state = makeState({
+        quota: { weeklyUsedPct: 62, windowUsedPct: 89 },
+        localEstimate: { weeklyPct: 62.3, windowPct: 89.1, calibratedAt: Date.now() },
+      });
+      expect(resolveWeeklyPct(state)).to.equal(62.3);
+      expect(resolveWindowPct(state)).to.equal(89.1);
+    });
+
+    it('falls back to local estimate when no API quota exists', () => {
+      const state = makeState({
+        quota: null,
+        localEstimate: { weeklyPct: 46, windowPct: 2, calibratedAt: Date.now() },
+      });
+      expect(resolveWeeklyPct(state)).to.equal(46);
+      expect(resolveWindowPct(state)).to.equal(2);
+    });
+
+    it('returns 0 when no data exists', () => {
+      const state = makeState({ quota: null, localEstimate: null });
+      expect(resolveWeeklyPct(state)).to.equal(0);
+      expect(resolveWindowPct(state)).to.equal(0);
+    });
+
+    it('returns API value even when local estimate has no calibration', () => {
+      const state = makeState({
+        quota: { weeklyUsedPct: 62, windowUsedPct: 89 },
+        localEstimate: { weeklyPct: 2, windowPct: 46, calibratedAt: null },
+      });
+      expect(resolveWeeklyPct(state)).to.equal(62);
+      expect(resolveWindowPct(state)).to.equal(89);
+    });
+  });
 });
 
 function makeQuota(partial: Partial<QuotaData> = {}): QuotaData {
@@ -196,6 +241,61 @@ function makeQuota(partial: Partial<QuotaData> = {}): QuotaData {
     parallelLimit: 30,
     ...partial,
   };
+}
+
+function makeState(partial: { quota?: Partial<QuotaData> | null; localEstimate?: Partial<import('../src/types').LocalEstimate> | null }): AppState {
+  const base: AppState = {
+    quota: null,
+    lastFetchAt: null,
+    lastSuccessfulFetchAt: null,
+    error: null,
+    authStatus: 'unknown',
+    dataSource: 'no-data',
+    isLoading: false,
+    localEstimate: null,
+    usageEntries: [],
+    ui: { displayMode: 'percent', language: 'auto', isPaused: false },
+  };
+  if (partial.quota === null) {
+    base.quota = null;
+  } else if (partial.quota) {
+    base.quota = makeQuota(partial.quota);
+  }
+  if (partial.localEstimate) {
+    base.localEstimate = {
+      weeklyPct: 0,
+      windowPct: 0,
+      tokenCapacity: null,
+      windowCostCapacity: null,
+      calibratedAt: null,
+      cost5h: 0,
+      cost7d: 0,
+      costToday: 0,
+      requestsToday: 0,
+      tokensToday: 0,
+      tokensOutToday: 0,
+      tokensCacheReadToday: 0,
+      tokensCacheCreateToday: 0,
+      tokensIn5h: 0,
+      tokensOut5h: 0,
+      tokensCacheRead5h: 0,
+      tokensCacheCreate5h: 0,
+      requests5h: 0,
+      tokensIn7d: 0,
+      tokensOut7d: 0,
+      tokensCacheRead7d: 0,
+      tokensCacheCreate7d: 0,
+      requests7d: 0,
+      tokensThisCycle: 0,
+      tokensOutThisCycle: 0,
+      tokensCacheReadThisCycle: 0,
+      tokensCacheCreateThisCycle: 0,
+      costThisCycle: 0,
+      requestsThisCycle: 0,
+      ...partial.localEstimate,
+    };
+  }
+  return base;
 }
 
 

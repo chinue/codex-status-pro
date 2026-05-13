@@ -28,7 +28,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         quota: action.payload,
-        lastFetchAt: action.payload.weeklyResetAt,
+        lastFetchAt: action.fetchedAt ?? null,
         dataSource: 'cache',
         error: null,
       };

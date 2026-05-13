@@ -1,5 +1,32 @@
 # ChangeLog
 
+## [0.3.14] - 2026-05-13
+
+### Bug 修复
+
+- **修复 `getRateLimits()` 读取到错误的旧 rate_limits**：用户本地 `~/.codex/sessions/` 中有多个 session 文件，其中 `2026/05/13` 的文件最后 rate_limits 是 `2%/46%`，而 `2026/05/11` 的文件在更晚时间（21:52）追加到了 `92%/63%`（接近官网真实值）。但由于 `fs.readdir` 按目录名顺序遍历，`2026/05/13` 排在后面，其旧值覆盖了前面的更新值。现已修复：
+  1. `getRateLimits()` 每次调用前清空 `latestRateLimits`，避免被之前的扫描污染。
+  2. 新增 `resets_at` 字段解析（本地 jsonl 使用绝对时间戳，而非 API 头中的 `resets_in_seconds`）。
+  3. 新增 `isRateLimitsNewer()` 比较逻辑：只有遇到 `resets_at` 更大的 rate_limits 时才更新，确保始终保留最新值。
+  4. `rateLimitsToQuota()` 优先使用 `resets_at` 计算重置时间，修复剩余时间显示错误。
+
+## [0.3.13] - 2026-05-13
+
+### Bug 修复
+
+- **彻底修复百分比严重偏离官网（P0）**：
+  1. **`resolveWeeklyPct` 优先级反转**：之前 `localEstimate.weeklyPct` 无条件优先于 `quota.weeklyUsedPct`，导致缓存恢复时默认值为 0、short tick 错误覆盖、本地 rate_limits fallback 污染后都会显示错误百分比。现已改为**API quota 为权威来源**，`localEstimate` 仅在四舍五入后与 API 值匹配时才用于保留小数精度。
+  2. **本地 rate_limits 不再污染缓存**：API 失败 fallback 到本地 `rate_limits` 时，之前会调用 `processQuotaData` 将过时的本地值（如 2%/46%）写入 `~/.codex/codex-status-pro-cache-v1.json`，导致每次启动都加载错误数据。现已增加 `persistToCache` 参数，本地 fallback 时**只显示、不持久化**。
+  3. **修复 `lastFetchAt` 被错误设为 `weeklyResetAt`**：`CACHE_LOADED` 之前将 `lastFetchAt` 设为 `quota.weeklyResetAt`（重置时间），导致 tooltip 显示错误，stale 检测混乱。现已改为使用缓存的 `fetchedAt` 字段。
+
+## [0.3.12] - 2026-05-13
+
+### Bug 修复
+
+- **修复百分比严重偏离官网（P0）**：官网 5h 89%/7d 62%，扩展却显示 5h 2%/7d 46%。根因有两处：
+  1. `archived_sessions` 中的过期 `rate_limits`（如 2%）覆盖了最新值。现已限制扫描范围，仅读取 `~/.codex/sessions/`，排除 `archived_sessions`。
+  2. 多设备/headless 使用时本地 session 日志不完整，`calibration` 估算值远低于真实 API 值。现已增加漂移阈值保护：当 calibration 估算与现有 API quota 相差 >5% 时，保留 API 值，避免状态栏显示严重偏低的百分比。
+
 ## [0.3.11] - 2026-05-13
 
 ### Bug 修复

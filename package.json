@@ -2,7 +2,7 @@
   "name": "codex-status-pro",
   "displayName": "CodexStatusPro",
   "description": "Monitor Codex token usage and rate limits in real-time",
-  "version": "0.3.11",
+  "version": "0.3.14",
   "publisher": "kayuii",
   "license": "MIT",
   "repository": {
@@ -213,14 +213,14 @@
         },
         "codexStatusPro.pricing.models.gpt5.inputPerMillion": {
           "type": "number",
-          "default": 2.0,
+          "default": 2,
           "minimum": 0,
           "order": 80,
           "description": "gpt-5 input token price per million (USD)."
         },
         "codexStatusPro.pricing.models.gpt5.outputPerMillion": {
           "type": "number",
-          "default": 10.0,
+          "default": 10,
           "minimum": 0,
           "order": 81,
           "description": "gpt-5 output token price per million (USD)."
@@ -234,7 +234,7 @@
         },
         "codexStatusPro.pricing.models.gpt5.cacheCreatePerMillion": {
           "type": "number",
-          "default": 2.0,
+          "default": 2,
           "minimum": 0,
           "order": 83,
           "description": "gpt-5 cache-write token price per million (USD)."

@@ -170,12 +170,13 @@ export class Scheduler {
     };
 
     // Prefer calibration estimates when valid; otherwise use local rate limits.
-    // Guard: when an API quota exists, don't let a zero calibration estimate
-    // overwrite a non-zero API percentage (common when local session files have
-    // no entries for the current cycle). Otherwise allow the smooth decimal
-    // update to proceed.
+    // Guard: when an API quota exists, only overwrite if the calibrated estimate
+    // is within 5 percentage points of the API value. This prevents severe drift
+    // when local session files don't reflect all usage (e.g. other devices,
+    // VS Code Copilot Chat, etc.).
+    const PCT_THRESHOLD = 5;
     if (weeklyPct !== null) {
-      if (!quota || weeklyPct > 0 || quota.weeklyUsedPct === 0) {
+      if (!quota || Math.abs(weeklyPct - quota.weeklyUsedPct) <= PCT_THRESHOLD) {
         payload.weeklyPct = weeklyPct;
       }
     } else if (weeklyPctLocal !== undefined) {
@@ -183,7 +184,7 @@ export class Scheduler {
     }
 
     if (windowPct !== null) {
-      if (!quota || windowPct > 0 || quota.windowUsedPct === 0) {
+      if (!quota || Math.abs(windowPct - quota.windowUsedPct) <= PCT_THRESHOLD) {
         payload.windowPct = windowPct;
       }
     } else if (windowPctLocal !== undefined) {
@@ -237,7 +238,9 @@ export class Scheduler {
     }
 
     if (quotaData) {
-      await this.processQuotaData(quotaData, now, 'local-only');
+      // Local rate_limits are temporary fallback only; do NOT persist to cache
+      // because they can be severely stale (e.g. other devices, old sessions).
+      await this.processQuotaData(quotaData, now, 'local-only', false);
       this.store.dispatch({ type: 'LOADING_END' });
       return;
     }
@@ -255,7 +258,7 @@ export class Scheduler {
 
     const cached = await this.cacheService.read();
     if (cached) {
-      this.store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota });
+      this.store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota, fetchedAt: cached.fetchedAt });
       if (cached.calibration) {
         this.store.dispatch({
           type: 'LOCAL_ESTIMATE',
@@ -275,6 +278,7 @@ export class Scheduler {
     quotaData: import('../types').QuotaData,
     now: number,
     source: import('../types').DataSource,
+    persistToCache: boolean = true,
   ): Promise<void> {
     const oldQuota = this.store.getState().quota;
 
@@ -306,17 +310,19 @@ export class Scheduler {
     const tokenCapacity = calibrateTokenCapacity(weeklyPct, localUsage.tokensThisCycle);
     const windowCostCapacity = calibrateWindowCostCapacity(windowPct, localUsage.cost5h);
 
-    await this.cacheService.write({
-      quota: quotaData,
-      fetchedAt: now,
-      calibration: {
-        tokenCapacity,
-        windowCostCapacity,
-        calibratedAt: now,
-        reset5hAt: quotaData.windowResetAt,
-        reset7dAt: quotaData.weeklyResetAt,
-      },
-    });
+    if (persistToCache) {
+      await this.cacheService.write({
+        quota: quotaData,
+        fetchedAt: now,
+        calibration: {
+          tokenCapacity,
+          windowCostCapacity,
+          calibratedAt: now,
+          reset5hAt: quotaData.windowResetAt,
+          reset7dAt: quotaData.weeklyResetAt,
+        },
+      });
+    }
 
     this.store.dispatch({ type: 'API_SUCCESS', payload: quotaData, source });
     this.store.dispatch({
@@ -359,18 +365,24 @@ export class Scheduler {
   private rateLimitsToQuota(rateLimits: RateLimits, now: number): import('../types').QuotaData {
     const primary = rateLimits.primary;
     const secondary = rateLimits.secondary;
-    const windowResetSec = primary?.resets_in_seconds ?? 5 * 3600;
-    const weeklyResetSec = secondary?.resets_in_seconds ?? 7 * 24 * 3600;
+    // Local jsonl uses resets_at (absolute Unix timestamp in seconds);
+    // API headers use resets_in_seconds (relative). Prefer resets_at.
+    const windowResetAt = primary?.resets_at
+      ? primary.resets_at * 1000
+      : now + (primary?.resets_in_seconds ?? 5 * 3600) * 1000;
+    const weeklyResetAt = secondary?.resets_at
+      ? secondary.resets_at * 1000
+      : now + (secondary?.resets_in_seconds ?? 7 * 24 * 3600) * 1000;
     return {
       weeklyLimit: 0,
       weeklyUsed: 0,
       weeklyUsedPct: secondary?.used_percent ?? 0,
-      weeklyResetAt: now + weeklyResetSec * 1000,
+      weeklyResetAt,
       windowLimit: 0,
       windowUsed: 0,
       windowRemaining: 0,
       windowUsedPct: primary?.used_percent ?? 0,
-      windowResetAt: now + windowResetSec * 1000,
+      windowResetAt,
       parallelLimit: 0,
     };
   }

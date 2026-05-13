@@ -70,11 +70,15 @@ export interface RateLimits {
     used_percent: number;
     window_minutes?: number;
     resets_in_seconds?: number;
+    /** Absolute Unix timestamp (seconds) when the limit resets. Present in local jsonl files. */
+    resets_at?: number;
   };
   secondary?: {
     used_percent: number;
     window_minutes?: number;
     resets_in_seconds?: number;
+    /** Absolute Unix timestamp (seconds) when the limit resets. Present in local jsonl files. */
+    resets_at?: number;
   };
 }
 

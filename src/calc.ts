@@ -221,28 +221,40 @@ export function safeEstimate(
 // ---------------------------------------------------------------------------
 
 /** Resolve weekly percentage from state with consistent priority:
- *  1. Calibrated local estimate (most precise)
- *  2. API quota data
+ *  1. API quota data (authoritative source)
+ *  2. Calibrated local estimate (only when it refines the same API value)
  *  3. Fallback to 0
+ *
+ *  We never let a stale or drifted local estimate override the API value.
+ *  Calibration is only used to preserve decimal precision when the rounded
+ *  estimate matches the integer API percentage.
  */
 export function resolveWeeklyPct(state: AppState): number {
   const le = state.localEstimate;
   const q = state.quota;
+  if (q) {
+    if (le && le.calibratedAt !== null && Math.round(le.weeklyPct) === q.weeklyUsedPct) {
+      return le.weeklyPct; // Preserve decimal precision from calibration
+    }
+    return q.weeklyUsedPct;
+  }
   if (le && le.calibratedAt !== null) return le.weeklyPct;
-  if (q) return q.weeklyUsedPct;
   return 0;
 }
 
-/** Resolve window percentage from state with consistent priority:
- *  1. Calibrated local estimate (most precise)
- *  2. API quota data
- *  3. Fallback to 0
+/** Resolve window percentage from state with consistent priority.
+ *  Same logic as resolveWeeklyPct: API quota is authoritative.
  */
 export function resolveWindowPct(state: AppState): number {
   const le = state.localEstimate;
   const q = state.quota;
+  if (q) {
+    if (le && le.calibratedAt !== null && Math.round(le.windowPct) === q.windowUsedPct) {
+      return le.windowPct; // Preserve decimal precision from calibration
+    }
+    return q.windowUsedPct;
+  }
   if (le && le.calibratedAt !== null) return le.windowPct;
-  if (q) return q.windowUsedPct;
   return 0;
 }
 
