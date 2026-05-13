@@ -168,14 +168,22 @@ export class Scheduler {
     };
 
     // Prefer calibration estimates when valid; otherwise use local rate limits.
+    // Guard: when an API quota exists, don't let a zero calibration estimate
+    // overwrite a non-zero API percentage (common when local session files have
+    // no entries for the current cycle). Otherwise allow the smooth decimal
+    // update to proceed.
     if (weeklyPct !== null) {
-      payload.weeklyPct = weeklyPct;
+      if (!quota || weeklyPct > 0 || quota.weeklyUsedPct === 0) {
+        payload.weeklyPct = weeklyPct;
+      }
     } else if (weeklyPctLocal !== undefined) {
       payload.weeklyPct = weeklyPctLocal;
     }
 
     if (windowPct !== null) {
-      payload.windowPct = windowPct;
+      if (!quota || windowPct > 0 || quota.windowUsedPct === 0) {
+        payload.windowPct = windowPct;
+      }
     } else if (windowPctLocal !== undefined) {
       payload.windowPct = windowPctLocal;
     }

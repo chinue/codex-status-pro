@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [0.3.10] - 2026-05-13
+
+### Bug 修复
+
+- **修复 short tick 错误覆盖 API 百分比**：当本地 session 文件在当前周期内没有记录（`tokensThisCycle === 0`）时，calibration 估算会算出 `0%`，错误覆盖 API 返回的准确百分比。现已增加保护：只有当校准估算值 `> 0`（或 API 本身为 `0%`）时才允许 short tick 覆盖，防止状态栏显示错误的 `0%`。
+- **恢复 tooltip Quota 表格显示**：之前因 Codex API 不返回绝对限额而隐藏了 Quota Summary 表格，导致 tooltip 中一个表格都没有。现已恢复显示。
+
 ## [0.3.9] - 2026-05-13
 
 ### 改进
