@@ -51,6 +51,8 @@ export interface IAuthProvider {
   startLoginFlow?(): Promise<boolean>;
   /** Invalidate cached token (called on sign out) */
   invalidate(): void;
+  /** Initialize SecretStorage reference (for providers that store credentials in VS Code secrets) */
+  initSecrets?(secrets: import('vscode').SecretStorage): void;
 }
 
 export interface ApiResult {

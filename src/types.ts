@@ -76,6 +76,7 @@ export interface AppState {
   isLoading: boolean;
   localEstimate: LocalEstimate | null;
   usageEntries: UsageEntry[];
+  activeProvider: string;
   ui: {
     displayMode: DisplayMode;
     language: LanguageSetting;
@@ -116,6 +117,7 @@ export type Action =
   | { type: 'UI_SET_DISPLAY_MODE'; payload: DisplayMode }
   | { type: 'UI_SET_LANGUAGE'; payload: LanguageSetting }
   | { type: 'UI_SET_PAUSED'; payload: boolean }
+  | { type: 'SET_PROVIDER'; payload: string }
   | { type: 'LOADING_START' }
   | { type: 'LOADING_END' }
   | { type: 'SIGN_OUT' };

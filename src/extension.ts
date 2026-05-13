@@ -3,7 +3,8 @@
 import * as vscode from 'vscode';
 import { Store } from './store';
 import { ConfigService } from './config';
-import { createCodexProvider } from './providers/codex';
+import { getProvider, resolveProviderId } from './providers/registry';
+import { IProvider } from './providers/base/types';
 import { CacheService } from './services/cacheService';
 import { LocalUsageService } from './services/localUsageService';
 import { Scheduler } from './services/scheduler';
@@ -18,10 +19,69 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const store = new Store();
   const config = ConfigService.getInstance();
-  const provider = createCodexProvider();
   const cacheService = CacheService.getInstance();
   const localUsageService = LocalUsageService.getInstance();
-  localUsageService.setProvider(provider);
+
+  let currentProvider: IProvider;
+  let scheduler: Scheduler;
+  let statusBar: StatusBarPresenter;
+
+  async function activateProvider(providerId: string): Promise<void> {
+    // 1. Stop existing scheduler
+    scheduler?.stop();
+
+    // 2. Create new provider
+    const provider = getProvider(providerId);
+    if (!provider) {
+      log(`Unknown provider "${providerId}", falling back to codex`);
+      currentProvider = getProvider('codex')!;
+    } else {
+      currentProvider = provider;
+    }
+
+    // 3. Update services
+    cacheService.setProviderId(currentProvider.id);
+    localUsageService.setProvider(currentProvider);
+    if (currentProvider.auth.initSecrets) {
+      currentProvider.auth.initSecrets(context.secrets);
+    }
+
+    // 4. Reset store but preserve UI settings and activeProvider
+    const prevUi = store.getState().ui;
+    store.dispatch({ type: 'SIGN_OUT' });
+    store.dispatch({ type: 'SET_PROVIDER', payload: currentProvider.id });
+    store.dispatch({ type: 'UI_SET_DISPLAY_MODE', payload: prevUi.displayMode });
+    store.dispatch({ type: 'UI_SET_LANGUAGE', payload: prevUi.language });
+    store.dispatch({ type: 'UI_SET_PAUSED', payload: prevUi.isPaused });
+
+    // 5. Restore cache for new provider
+    const cached = await cacheService.read();
+    if (cached) {
+      store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota, fetchedAt: cached.fetchedAt });
+      if (cached.calibration) {
+        store.dispatch({
+          type: 'LOCAL_ESTIMATE',
+          payload: {
+            tokenCapacity: cached.calibration.tokenCapacity,
+            windowCostCapacity: cached.calibration.windowCostCapacity,
+            calibratedAt: cached.calibration.calibratedAt,
+          },
+        });
+      }
+    }
+
+    // 6. Recreate status bar
+    statusBar?.dispose();
+    statusBar = new StatusBarPresenter(store, currentProvider);
+
+    // 7. Recreate and start scheduler
+    scheduler = new Scheduler(store, currentProvider.auth, currentProvider.api, cacheService, localUsageService);
+    scheduler.start();
+  }
+
+  // Determine initial provider
+  const providerId = await resolveProviderId(config.provider);
+  await activateProvider(providerId);
 
   // 1. Restore pause state from globalState (cross-window sync)
   const pausedFromGlobal = context.globalState.get<boolean>(PAUSE_STATE_KEY, false);
@@ -29,45 +89,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: true });
   }
 
-  // 2. Restore cache
-  const cached = await cacheService.read();
-  if (cached) {
-    store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota, fetchedAt: cached.fetchedAt });
-    // Restore calibration
-    if (cached.calibration) {
-      store.dispatch({
-        type: 'LOCAL_ESTIMATE',
-        payload: {
-          tokenCapacity: cached.calibration.tokenCapacity,
-          windowCostCapacity: cached.calibration.windowCostCapacity,
-          calibratedAt: cached.calibration.calibratedAt,
-        },
-      });
-    }
-  }
-
-  // 3. Sync language from config to store so StatusBar uses consistent locale
-  store.dispatch({ type: 'UI_SET_LANGUAGE', payload: config.language });
-
-  // 4. Initialize Presenters
-  const statusBar = new StatusBarPresenter(store, provider);
-
-  // 5. Start scheduler
-  const scheduler = new Scheduler(store, provider.auth, provider.api, cacheService, localUsageService);
-  scheduler.start();
-
-  // 5. Register commands
+  // Register commands
   context.subscriptions.push(
     vscode.commands.registerCommand('codexStatusPro.refresh', () => {
       scheduler.force();
     }),
     vscode.commands.registerCommand('codexStatusPro.signIn', async () => {
-      void vscode.window.showInformationMessage('Please run "codex login" in your terminal to authenticate.');
+      if (currentProvider.auth.startLoginFlow) {
+        const ok = await currentProvider.auth.startLoginFlow();
+        if (ok) {
+          store.dispatch({ type: 'AUTH_STATUS', payload: 'authenticated' });
+        }
+      } else {
+        void vscode.window.showInformationMessage(`Please run "${currentProvider.ui.displayName.toLowerCase()} login" in your terminal to authenticate.`);
+      }
     }),
     vscode.commands.registerCommand('codexStatusPro.signOut', async () => {
-      await deleteApiKey(context.secrets);
-      await deleteOAuth(context.secrets);
-      provider.auth.invalidate();
+      // Clear provider-specific credentials
+      if (currentProvider.id === 'kimi') {
+        await context.secrets.delete('kimiStatusPro.apiKey');
+        await context.secrets.delete('kimiStatusPro.oauthCredentials');
+      } else {
+        await deleteApiKey(context.secrets);
+        await deleteOAuth(context.secrets);
+      }
+      currentProvider.auth.invalidate();
       localUsageService.invalidate();
       store.dispatch({ type: 'SIGN_OUT' });
     }),
@@ -87,12 +133,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
-  // 6. Listen to configuration changes (including pause broadcast)
+  // Listen to configuration changes
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration('codexStatusPro')) {
         store.dispatch({ type: 'UI_SET_DISPLAY_MODE', payload: config.displayMode });
         store.dispatch({ type: 'UI_SET_LANGUAGE', payload: config.language });
+
+        // Handle provider change
+        if (e.affectsConfiguration('codexStatusPro.provider')) {
+          const newId = await resolveProviderId(config.provider);
+          if (newId !== store.getState().activeProvider) {
+            await activateProvider(newId);
+          }
+        }
+
         // Sync pause state from other windows via _pauseSignal broadcast
         if (e.affectsConfiguration('codexStatusPro._pauseSignal')) {
           const pausedFromGlobal = context.globalState.get<boolean>(PAUSE_STATE_KEY, false);
@@ -105,7 +160,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  // 7. Persist cache on deactivation via subscription disposal
+  // Persist cache on deactivation via subscription disposal
   context.subscriptions.push(
     { dispose: () => { scheduler.stop(); statusBar.dispose(); } }
   );

@@ -8,21 +8,34 @@ import * as os from 'os';
 import { CachedData } from '../types';
 
 const CACHE_DIR = path.join(os.homedir(), '.codex');
-const CACHE_FILE = path.join(CACHE_DIR, 'codex-status-pro-cache-v1.json');
 const SCHEMA = 'codex-status-pro-cache-v1';
 const CURRENT_VERSION = 2;
 
+function cacheFileFor(providerId?: string): string {
+  const suffix = providerId && providerId !== 'codex' ? `-${providerId}` : '';
+  return path.join(CACHE_DIR, `codex-status-pro-cache-v1${suffix}.json`);
+}
+
 export class CacheService {
   private static instance: CacheService;
-  private cacheFile: string;
+  private providerId: string | undefined;
+  private overrideFile: string | undefined;
 
   static getInstance(): CacheService {
     if (!CacheService.instance) { CacheService.instance = new CacheService(); }
     return CacheService.instance;
   }
 
-  constructor(cacheFile?: string) {
-    this.cacheFile = cacheFile ?? CACHE_FILE;
+  constructor(overrideFile?: string) {
+    this.overrideFile = overrideFile;
+  }
+
+  setProviderId(id: string): void {
+    this.providerId = id;
+  }
+
+  private get cacheFile(): string {
+    return this.overrideFile ?? cacheFileFor(this.providerId);
   }
 
   async read(): Promise<CachedData | null> {

@@ -38,9 +38,10 @@ export class StatusBarPresenter {
   constructor(private store: Store, private provider?: IProvider) {
     const alignment = this.config.statusBarAlignment;
     this.displayName = provider?.ui.displayName ?? 'Codex';
+    const icon = provider?.ui.mainIcon ?? '$(openai)';
 
     this.itemWeekly = vscode.window.createStatusBarItem(alignment, 104);
-    this.itemWeekly.name = 'CodexStatusPro Weekly';
+    this.itemWeekly.name = `${this.displayName}StatusPro Weekly`;
     this.itemWeekly.command = 'codexStatusPro.showDashboard';
     this.itemWeekly.text = `$(sync~spin) ${this.displayName}…`;
     this.itemWeekly.show();
@@ -160,12 +161,15 @@ export class StatusBarPresenter {
 
       if (this.config.displayMode === 'absolute') {
         if (hasApiData) {
-          this.itemWeekly.text = `$(openai) ${this.displayName}:${state.quota!.weeklyUsed}/${state.quota!.weeklyLimit}${sourceIndicator}`;
+          const icon = this.provider?.ui.mainIcon ?? '$(openai)';
+      this.itemWeekly.text = `${icon} ${this.displayName}:${state.quota!.weeklyUsed}/${state.quota!.weeklyLimit}${sourceIndicator}`;
         } else {
-          this.itemWeekly.text = `$(openai) ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 1) : '—'}${sourceIndicator}`;
+          const icon = this.provider?.ui.mainIcon ?? '$(openai)';
+          this.itemWeekly.text = `${icon} ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 1) : '—'}${sourceIndicator}`;
         }
       } else {
-        this.itemWeekly.text = `$(openai) ${this.displayName}:${formatPercent(weeklyPct, 1)}${sourceIndicator}`;
+        const icon = this.provider?.ui.mainIcon ?? '$(openai)';
+        this.itemWeekly.text = `${icon} ${this.displayName}:${formatPercent(weeklyPct, 1)}${sourceIndicator}`;
       }
 
       this.itemWeekly.command = 'codexStatusPro.showDashboard';

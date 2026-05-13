@@ -4,7 +4,7 @@ export type Locale = 'en' | 'zh-CN';
 
 export const dict: Record<Locale, Record<string, string>> = {
   en: {
-    'tooltip.title': 'Codex Code Usage',
+    'tooltip.title': 'Code Assistant Usage',
     'tooltip.notLoggedIn': 'Sign in to see your usage data.\nRun "CodexStatusPro: Sign In" or set an API key.',
     'tooltip.authFailed': 'Authentication failed. Please sign in again.',
     'tooltip.window5h': '5h window',
@@ -32,7 +32,7 @@ export const dict: Record<Locale, Record<string, string>> = {
     'tooltip.table.col.parallel': 'Parallel',
     'tooltip.resumeAutoRefresh': 'Resume auto-refresh',
     'tooltip.pauseAutoRefresh': 'Pause auto-refresh',
-    'dashboard.title': 'Codex Code Usage',
+    'dashboard.title': 'Code Assistant Usage',
     'dashboard.loading': 'Loading…',
     'dashboard.window5h': '5h window',
     'dashboard.window7d': '7d window',
@@ -98,9 +98,15 @@ export const dict: Record<Locale, Record<string, string>> = {
     'dashboard.cacheTtl': 'Cache TTL',
     'dashboard.officialPricing': 'Official Pricing →',
     'dashboard.msgs': 'msgs',
+    'provider.codex': 'Codex',
+    'provider.kimi': 'Kimi',
+    'provider.claude': 'Claude',
+    'provider.glm': 'GLM',
+    'provider.cursor': 'Cursor',
+    'provider.auto': 'Auto',
   },
   'zh-CN': {
-    'tooltip.title': 'Codex Code \u7528\u91cf',
+    'tooltip.title': '\u7f16\u7a0b\u52a9\u624b\u7528\u91cf',
     'tooltip.notLoggedIn': '\u8bf7\u767b\u5f55\u540e\u67e5\u770b\u7528\u91cf\u6570\u636e\u3002\n\u8fd0\u884c "CodexStatusPro: Sign In" \u6216\u8bbe\u7f6e API Key\u3002',
     'tooltip.authFailed': '\u8ba4\u8bc1\u5931\u8d25\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u3002',
     'tooltip.window5h': '5h \u7a97\u53e3',
@@ -128,7 +134,7 @@ export const dict: Record<Locale, Record<string, string>> = {
     'tooltip.table.col.parallel': '\u5e76\u884c\u4e0a\u9650',
     'tooltip.resumeAutoRefresh': '\u6062\u590d\u81ea\u52a8\u5237\u65b0',
     'tooltip.pauseAutoRefresh': '\u6682\u505c\u81ea\u52a8\u5237\u65b0',
-    'dashboard.title': 'Codex Code \u7528\u91cf',
+    'dashboard.title': '\u7f16\u7a0b\u52a9\u624b\u7528\u91cf',
     'dashboard.loading': '\u52a0\u8f7d\u4e2d…',
     'dashboard.window5h': '5h \u7a97\u53e3',
     'dashboard.window7d': '7d \u7a97\u53e3',
@@ -194,6 +200,12 @@ export const dict: Record<Locale, Record<string, string>> = {
     'dashboard.cacheTtl': '\u7f13\u5b58 TTL',
     'dashboard.officialPricing': '\u67e5\u770b\u5b98\u65b9\u5b9a\u4ef7 \u2192',
     'dashboard.msgs': '\u6d88\u606f',
+    'provider.codex': 'Codex',
+    'provider.kimi': 'Kimi',
+    'provider.claude': 'Claude',
+    'provider.glm': '\u667a\u8c31',
+    'provider.cursor': 'Cursor',
+    'provider.auto': '\u81ea\u52a8\u68c0\u6d4b',
   },
 };
 

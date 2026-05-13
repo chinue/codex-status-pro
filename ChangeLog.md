@@ -1,5 +1,29 @@
 # ChangeLog
 
+## [0.4.0] - 2026-05-13
+
+### 新增（重大功能）
+
+- **多厂商切换架构（参考 tokscale 抽象方法）**：扩展从单一 Codex 监控改造为支持多厂商切换的通用编码助手用量监控。
+  - **Provider Registry**：新增 `src/providers/registry.ts`，支持 Codex、Kimi、Claude、GLM、Cursor 五家厂商。Codex 和 Kimi 为完整实现，其余为占位接口（后续可逐步填充）。
+  - **Dashboard 厂商切换下拉框**：顶部工具栏新增 `<select>` 下拉框，可实时切换当前监控的厂商，无需重启 VS Code。
+  - **配置项 `codexStatusPro.provider`**：支持 `auto`/`codex`/`kimi`/`claude`/`glm`/`cursor`。`auto` 模式自动检测本地 session 目录（`~/.codex/sessions/`、`~/.kimi/sessions/`、`~/.claude/`）。
+  - **各厂商数据完全隔离**：每个厂商有独立的缓存文件（`codex-status-pro-cache-v1-{providerId}.json`），切换时 Store 状态重置，Scheduler 重建。
+  - **Kimi Provider 完整移植**：从参考工程 kimi-status-pro 移植：
+    - **鉴权**：OAuth device code flow + API Key + CLI credentials 文件 fallback
+    - **API**：`api.kimi.com/coding/v1/usages` JSON body 解析
+    - **本地扫描**：`~/.kimi/sessions/<session>/<conv>/wire.jsonl`，解析 `message.type === 'StatusUpdate'` 的 token_usage
+    - **定价**：CNY（¥），k2.6 单模型（input ¥6.50/M，output ¥27.00/M）
+  - **状态栏动态图标**：根据当前 provider 切换图标（Codex `$(openai)`、Kimi `🌘`、Claude `✴️`、GLM `🧠`、Cursor `💠`）。
+  - **i18n 通用化**：`tooltip.title` 和 `dashboard.title` 从 "Codex Code Usage" 改为 "Code Assistant Usage"，适配多厂商场景。
+
+### 架构改造
+
+- `src/extension.ts`：重构 provider 激活逻辑，支持运行时切换和 Scheduler 重建。
+- `src/store.ts`：新增 `activeProvider` 字段和 `SET_PROVIDER` action。
+- `src/services/cacheService.ts`：缓存文件按 provider 隔离。
+- `src/providers/base/types.ts`：`IAuthProvider` 新增可选 `initSecrets` 方法。
+
 ## [0.3.17] - 2026-05-13
 
 ### 新增

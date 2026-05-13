@@ -19,6 +19,14 @@ export class ConfigService {
     return vscode.workspace.getConfiguration(CFG_SECTION);
   }
 
+  get provider(): string {
+    return this.cfg.get<string>('provider', 'auto');
+  }
+
+  async setProvider(id: string): Promise<void> {
+    await this.cfg.update('provider', id, true);
+  }
+
   get displayMode(): DisplayMode {
     return this.cfg.get<DisplayMode>('displayMode', 'percent');
   }

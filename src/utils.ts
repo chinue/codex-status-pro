@@ -26,6 +26,14 @@ export async function deleteApiKey(secrets: vscode.SecretStorage): Promise<void>
   await secrets.delete(SECRET_API_KEY);
 }
 
+export async function readApiKey(secrets: vscode.SecretStorage): Promise<string | undefined> {
+  return secrets.get(SECRET_API_KEY);
+}
+
+export async function readOAuth(secrets: vscode.SecretStorage): Promise<string | undefined> {
+  return secrets.get(SECRET_OAUTH);
+}
+
 export async function deleteOAuth(secrets: vscode.SecretStorage): Promise<void> {
   await secrets.delete(SECRET_OAUTH);
 }

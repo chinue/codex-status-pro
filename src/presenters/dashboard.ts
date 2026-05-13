@@ -11,6 +11,7 @@ import {
   AppState, UsageEntry, DashboardMessage, KimiUsageData, DashboardAggregates,
   HeatmapData, CostCurveOptions, TokenPricing,
 } from '../types';
+import { listProviders, getProviderInfo } from '../providers/registry';
 
 export class DashboardPanel {
   private static instance: DashboardPanel | undefined;
@@ -20,12 +21,15 @@ export class DashboardPanel {
   private historyService = HistoryService.getInstance();
   private currencySymbol: string;
 
+  private lastProvider: string;
+
   private constructor(private store: Store) {
     this.nonce = crypto.randomBytes(16).toString('hex');
     const config = ConfigService.getInstance();
     this.currencySymbol = config.currency.symbol;
     const locale = config.effectiveLanguage;
     const i18n = makeT(locale);
+    this.lastProvider = store.getState().activeProvider;
 
     this.panel = vscode.window.createWebviewPanel(
       'codexStatusProDashboard',
@@ -42,7 +46,14 @@ export class DashboardPanel {
       this.disposables
     );
 
-    const unsub = store.subscribe((state) => this.sendUpdate(state));
+    const unsub = store.subscribe((state) => {
+      if (state.activeProvider !== this.lastProvider) {
+        this.lastProvider = state.activeProvider;
+        const currentLocale = config.effectiveLanguage;
+        this.panel.webview.html = this.getHtml(this.nonce, currentLocale);
+      }
+      this.sendUpdate(state);
+    });
     this.disposables.push({ dispose: unsub });
 
     this.panel.onDidDispose(() => this.dispose(), undefined, this.disposables);
@@ -76,6 +87,11 @@ export class DashboardPanel {
       case 'openSettings':
         void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:kayuii.codex-status-pro');
         break;
+      case 'setProvider': {
+        const cfg = ConfigService.getInstance();
+        void cfg.setProvider(msg.payload as string);
+        break;
+      }
       case 'getCostCurveOptions': {
         this.sendCostCurveOptions();
         break;
@@ -288,13 +304,22 @@ export class DashboardPanel {
   private getHtml(nonce: string, locale: string): string {
     const isZh = locale === 'zh-CN';
     const i18n = makeT(locale as any);
+    const activeProvider = this.store.getState().activeProvider;
+    const providers = listProviders();
+    const providerOptions = providers.map((p) => {
+      const label = isZh ? p.displayNameZh : p.displayName;
+      const selected = p.id === activeProvider ? ' selected' : '';
+      return `<option value="${p.id}"${selected}>${label}</option>`;
+    }).join('');
+    const activeInfo = getProviderInfo(activeProvider);
+    const activeName = activeInfo ? (isZh ? activeInfo.displayNameZh : activeInfo.displayName) : activeProvider;
     return `<!DOCTYPE html>
 <html lang="${isZh ? 'zh-CN' : 'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data:; connect-src 'none';">
-  <title>${i18n('dashboard.title')}</title>
+  <title>${activeName} ${i18n('dashboard.title')}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -503,6 +528,9 @@ export class DashboardPanel {
   <div class="header">
     <h1>${i18n('dashboard.title')}</h1>
     <div class="header-actions">
+      <select id="provider-select" style="margin-right:8px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--fg);font-size:12px;cursor:pointer;">
+        ${providerOptions}
+      </select>
       <button id="btn-refresh">${i18n('dashboard.refresh')}</button>
       <button id="btn-toggle">$ / %</button>
       <button id="btn-lang">&#127760; ${isZh ? 'EN' : '\u4e2d'}</button>
@@ -702,6 +730,9 @@ export class DashboardPanel {
     });
     document.getElementById('btn-settings').addEventListener('click', () => {
       vscode.postMessage({ type: 'openSettings' });
+    });
+    document.getElementById('provider-select').addEventListener('change', (e) => {
+      vscode.postMessage({ type: 'setProvider', payload: e.target.value });
     });
 
     document.getElementById('pricing-toggle').addEventListener('click', togglePricing);

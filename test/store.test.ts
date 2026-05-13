@@ -6,6 +6,7 @@ describe('Store', () => {
   it('initial state matches defaultState', () => {
     const store = new Store();
     expect(store.getState()).to.deep.equal(defaultState());
+    expect(store.getState().activeProvider).to.equal('codex');
   });
 
   it('CACHE_LOADED sets quota and dataSource', () => {
@@ -59,13 +60,21 @@ describe('Store', () => {
     expect(store.getState().isLoading).to.be.false;
   });
 
-  it('SIGN_OUT resets to default but preserves UI settings', () => {
+  it('SET_PROVIDER updates activeProvider', () => {
+    const store = new Store();
+    store.dispatch({ type: 'SET_PROVIDER', payload: 'kimi' });
+    expect(store.getState().activeProvider).to.equal('kimi');
+  });
+
+  it('SIGN_OUT resets to default but preserves UI settings and activeProvider', () => {
     const store = new Store();
     store.dispatch({ type: 'UI_SET_DISPLAY_MODE', payload: 'absolute' });
+    store.dispatch({ type: 'SET_PROVIDER', payload: 'kimi' });
     store.dispatch({ type: 'SIGN_OUT' });
     const s = store.getState();
     expect(s.quota).to.be.null;
     expect(s.ui.displayMode).to.equal('absolute');
+    expect(s.activeProvider).to.equal('kimi');
   });
 
   it('notifies subscribers on state change', () => {

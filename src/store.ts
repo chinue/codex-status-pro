@@ -12,6 +12,7 @@ export const defaultState = (): AppState => ({
   isLoading: false,
   localEstimate: null,
   usageEntries: [],
+  activeProvider: 'codex',
   ui: {
     displayMode: 'percent',
     language: 'auto',
@@ -129,6 +130,9 @@ function reducer(state: AppState, action: Action): AppState {
     case 'UI_SET_PAUSED':
       return { ...state, ui: { ...state.ui, isPaused: action.payload } };
 
+    case 'SET_PROVIDER':
+      return { ...state, activeProvider: action.payload };
+
     case 'LOADING_START':
       return { ...state, isLoading: true };
 
@@ -138,6 +142,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SIGN_OUT':
       return {
         ...defaultState(),
+        activeProvider: state.activeProvider,
         ui: state.ui,
       };
 

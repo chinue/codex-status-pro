@@ -2,7 +2,7 @@
   "name": "codex-status-pro",
   "displayName": "CodexStatusPro",
   "description": "Monitor Codex token usage and rate limits in real-time",
-  "version": "0.3.17",
+  "version": "0.4.0",
   "publisher": "kayuii",
   "license": "MIT",
   "repository": {
@@ -56,6 +56,20 @@
     "configuration": {
       "title": "CodexStatusPro",
       "properties": {
+        "codexStatusPro.provider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "codex",
+            "kimi",
+            "claude",
+            "glm",
+            "cursor"
+          ],
+          "default": "auto",
+          "order": 0,
+          "description": "Which coding assistant to monitor. auto: detect from local session directories."
+        },
         "codexStatusPro.displayMode": {
           "type": "string",
           "enum": [
