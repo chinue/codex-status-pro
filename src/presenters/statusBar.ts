@@ -217,19 +217,17 @@ export class StatusBarPresenter {
     return `<img src="data:image/svg+xml;base64,${encoded}" alt="${Math.round(safe * 100)}%" style="vertical-align:middle;"/>`;
   }
 
-  private htmlTable(header: string[], rows: string[][], aligns: string[] = []): string {
-    const th = header.map((h, i) => {
-      const align = aligns[i] || 'left';
-      return `<th style="text-align:${align};padding:3px 8px;font-weight:600;border-bottom:1px solid var(--vscode-panel-border);white-space:nowrap;">${h}</th>`;
-    }).join('');
-    const trs = rows.map((row, ri) =>
-      `<tr>${row.map((cell, i) => {
-        const align = aligns[i] || 'left';
-        const border = ri < rows.length - 1 ? 'border-bottom:1px solid var(--vscode-panel-border);' : '';
-        return `<td style="text-align:${align};padding:3px 8px;${border}white-space:nowrap;">${cell}</td>`;
-      }).join('')}</tr>`
-    ).join('');
-    return `<table style="border-collapse:collapse;width:100%;font-size:12px;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+  private markdownTable(header: string[], rows: string[][], aligns: string[] = []): string {
+    const alignChar = (a?: string) => {
+      if (a === 'r') return '---:';
+      if (a === 'c') return ':---:';
+      return ':---';
+    };
+    const line = header.map((_, i) => alignChar(aligns[i])).join('|');
+    const headerLine = '|' + header.join('|') + '|';
+    const sepLine = '|' + line + '|';
+    const rowLines = rows.map(row => '|' + row.join('|') + '|').join('\n');
+    return [headerLine, sepLine, rowLines].join('\n');
   }
 
   private async buildTooltip(state: AppState): Promise<vscode.MarkdownString> {
@@ -298,7 +296,7 @@ export class StatusBarPresenter {
         [t('tooltip.window5h'), String(q.windowUsed), String(q.windowLimit), String(q.windowRemaining)],
         [t('tooltip.window7d'), String(q.weeklyUsed), String(q.weeklyLimit), String(q.weeklyLimit - q.weeklyUsed)],
       ];
-      md.appendMarkdown(this.htmlTable(quotaHeader, quotaRows, ['l', 'r', 'r', 'r']));
+      md.appendMarkdown(this.markdownTable(quotaHeader, quotaRows, ['l', 'r', 'r', 'r']));
       if (q.parallelLimit) {
         md.appendMarkdown(`\n${t('tooltip.table.col.parallel')}: **${q.parallelLimit}**\n`);
       }
@@ -331,7 +329,7 @@ export class StatusBarPresenter {
           String(lu.requests7d), fmtCost(lu.cost7d, this.config.currency.symbol),
         ],
       ];
-      md.appendMarkdown(this.htmlTable(localHeader, localRows, ['l', 'r', 'r', 'r', 'r', 'r', 'r']));
+      md.appendMarkdown(this.markdownTable(localHeader, localRows, ['l', 'r', 'r', 'r', 'r', 'r', 'r']));
       md.appendMarkdown('\n');
     }
 
