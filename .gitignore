@@ -1,0 +1,7 @@
+node_modules/
+out/
+*.vsix
+.kimi/
+.tmp
+tmp
+*.code-workspace

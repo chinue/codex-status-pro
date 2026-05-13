@@ -1,0 +1,290 @@
+{
+  "name": "codex-status-pro",
+  "displayName": "CodexStatusPro",
+  "description": "Monitor Codex token usage and rate limits in real-time",
+  "version": "0.2.20",
+  "publisher": "kayuii",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chinue/kimi-status-pro"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "img/logo.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexStatusPro.refresh",
+        "title": "CodexStatusPro: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "codexStatusPro.signIn",
+        "title": "CodexStatusPro: Sign In",
+        "icon": "$(sign-in)"
+      },
+      {
+        "command": "codexStatusPro.signOut",
+        "title": "CodexStatusPro: Sign Out",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "codexStatusPro.setApiKey",
+        "title": "CodexStatusPro: Set API Key",
+        "icon": "$(key)"
+      },
+      {
+        "command": "codexStatusPro.showDashboard",
+        "title": "CodexStatusPro: Show Dashboard",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "codexStatusPro.togglePause",
+        "title": "CodexStatusPro: Toggle Pause",
+        "icon": "$(debug-pause)"
+      }
+    ],
+    "configuration": {
+      "title": "CodexStatusPro",
+      "properties": {
+        "codexStatusPro.displayMode": {
+          "type": "string",
+          "enum": [
+            "percent",
+            "absolute"
+          ],
+          "default": "percent",
+          "order": 1,
+          "description": "Status bar display mode. percent: show percentage with mini bar. absolute: show used/limit count."
+        },
+        "codexStatusPro.statusBar.alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "default": "right",
+          "order": 10,
+          "description": "Status bar alignment. left: aligned to the left side of the status bar. right: aligned to the right side."
+        },
+        "codexStatusPro.updateAnimationDurationMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 500,
+          "maximum": 10000,
+          "order": 14,
+          "description": "Duration of the moon update animation in milliseconds. Range: 500–10000. When new data arrives during animation, the timer resets."
+        },
+        "codexStatusPro.updateAnimationIntervalMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 100,
+          "maximum": 2000,
+          "order": 15,
+          "description": "Frame interval of the moon update animation in milliseconds. Range: 100–2000. Controls how fast the moon phases cycle."
+        },
+        "codexStatusPro.statusBar.utilizationColor.lt20": {
+          "type": "string",
+          "default": "#FFFFFF",
+          "order": 16,
+          "description": "Status bar text color when utilization is below 20%. Hex color string."
+        },
+        "codexStatusPro.statusBar.utilizationColor.lt40": {
+          "type": "string",
+          "default": "#FFFF80",
+          "order": 17,
+          "description": "Status bar text color when utilization is 20%–40%. Hex color string."
+        },
+        "codexStatusPro.statusBar.utilizationColor.lt60": {
+          "type": "string",
+          "default": "#00FF80",
+          "order": 18,
+          "description": "Status bar text color when utilization is 40%–60%. Hex color string."
+        },
+        "codexStatusPro.statusBar.utilizationColor.lt80": {
+          "type": "string",
+          "default": "#FF80FF",
+          "order": 19,
+          "description": "Status bar text color when utilization is 60%–80%. Hex color string."
+        },
+        "codexStatusPro.statusBar.utilizationColor.gte80": {
+          "type": "string",
+          "default": "#FF0000",
+          "order": 20,
+          "description": "Status bar text color when utilization is 80% or above. Hex color string."
+        },
+        "codexStatusPro.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 30,
+          "order": 30,
+          "description": "API refresh interval in seconds. Range: 30–∞. Long tick fetches quota from API."
+        },
+        "codexStatusPro.shortRefreshIntervalSeconds": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 60,
+          "order": 31,
+          "description": "Local estimation refresh interval in seconds. Range: 1–60. Short tick reads local JSONL and estimates usage without API call."
+        },
+        "codexStatusPro.dataRetentionDays": {
+          "type": "number",
+          "default": 365,
+          "minimum": 30,
+          "maximum": 3650,
+          "order": 32,
+          "description": "Local usage data retention period in days. Range: 30–3650. Older entries are discarded during scan."
+        },
+        "codexStatusPro.weeklyBudget": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "order": 50,
+          "description": "Weekly budget in configured currency. 0 means disabled. When cost7d exceeds this value, a warning is shown."
+        },
+        "codexStatusPro.heatmapDays": {
+          "type": "number",
+          "default": 90,
+          "minimum": 30,
+          "maximum": 365,
+          "order": 60,
+          "description": "Number of days to show in the usage history heatmap."
+        },
+        "codexStatusPro.heatmapCycles5h": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 60,
+          "order": 61,
+          "description": "Number of 5h cycles to display in the heatmap. Range: 1–60."
+        },
+        "codexStatusPro.heatmapCycles7d": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 60,
+          "order": 62,
+          "description": "Number of 7d cycles to display in the heatmap. Range: 1–60."
+        },
+        "codexStatusPro.heatmapCycles30d": {
+          "type": "number",
+          "default": 12,
+          "minimum": 1,
+          "maximum": 60,
+          "order": 63,
+          "description": "Number of 30d cycles to display in the heatmap. Range: 1–60."
+        },
+        "codexStatusPro.costCurveMaxPoints": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 200,
+          "maximum": 20000,
+          "order": 65,
+          "description": "Maximum number of data points for the cost curve. Range: 200–20000."
+        },
+        "codexStatusPro.chartHeightRatio": {
+          "type": "number",
+          "default": 0.4,
+          "minimum": 0.2,
+          "maximum": 1,
+          "order": 66,
+          "description": "Height ratio for dashboard charts (canvas height = width * ratio)."
+        },
+        "codexStatusPro.currency": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "USD",
+            "CNY"
+          ],
+          "default": "USD",
+          "order": 5,
+          "description": "Currency for cost display. auto: infer from provider. USD: US Dollar. CNY: Chinese Yuan."
+        },
+        "codexStatusPro.pricing.models.gpt5.inputPerMillion": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0,
+          "order": 80,
+          "description": "gpt-5 input token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.gpt5.outputPerMillion": {
+          "type": "number",
+          "default": 10.0,
+          "minimum": 0,
+          "order": 81,
+          "description": "gpt-5 output token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.gpt5.cacheReadPerMillion": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "order": 82,
+          "description": "gpt-5 cache-read token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.gpt5.cacheCreatePerMillion": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0,
+          "order": 83,
+          "description": "gpt-5 cache-write token price per million (USD)."
+        },
+        "codexStatusPro.pricing.officialUrl": {
+          "type": "string",
+          "default": "https://openai.com/pricing",
+          "order": 84,
+          "description": "Official pricing page URL shown in Dashboard."
+        },
+        "codexStatusPro.pricing.officialDate": {
+          "type": "string",
+          "default": "2026-05-13",
+          "order": 85,
+          "description": "Pricing publish date displayed next to the official pricing link (YYYY-MM-DD)."
+        },
+        "codexStatusPro.defaultModelName": {
+          "type": "string",
+          "default": "gpt-5",
+          "order": 70,
+          "description": "Default model name displayed when usage entry has no model information."
+        },
+        "codexStatusPro._pauseSignal": {
+          "type": "number",
+          "default": 0,
+          "description": "Internal: pause state broadcast signal (timestamp). Do not modify manually."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --production",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "test": "mocha --config .mocharc.json"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^16.18.0",
+    "@types/node-fetch": "^2.6.13",
+    "@types/sinon": "^17.0.3",
+    "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^3.9.1",
+    "chai": "^4.4.1",
+    "esbuild": "^0.19.0",
+    "mocha": "^10.2.0",
+    "node-fetch": "^2.7.0",
+    "sinon": "^17.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  }
+}
