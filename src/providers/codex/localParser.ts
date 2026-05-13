@@ -128,7 +128,16 @@ export class CodexLocalParser implements ILocalUsageProvider {
     this.latestRateLimits = null;
     const files = await this.scanDir(SESSIONS_DIR);
     for (const filePath of files) {
-      await this.updateFileState(filePath);
+      // Force re-parse to extract rate_limits regardless of fileStates cache.
+      // updateFileState skips parsing when the file is unchanged, which would
+      // leave latestRateLimits as null after we cleared it above.
+      let text: string;
+      try {
+        text = await fs.readFile(filePath, 'utf-8');
+      } catch {
+        continue;
+      }
+      this.parseText(text, Date.now());
     }
     return this.latestRateLimits;
   }

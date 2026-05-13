@@ -5,7 +5,7 @@ import * as crypto from 'crypto';
 import { Store } from '../store';
 import { ConfigService } from '../config';
 import { makeT } from '../i18n';
-import { formatPercent, fmtCurrency, fmtNumber } from '../calc';
+import { formatPercent, fmtCurrency, fmtNumber, resolveWeeklyPct, resolveWindowPct } from '../calc';
 import { HistoryService } from '../services/historyService';
 import {
   AppState, UsageEntry, DashboardMessage, KimiUsageData, DashboardAggregates,
@@ -201,9 +201,13 @@ export class DashboardPanel {
     const now = Date.now();
     const cacheAge = state.lastFetchAt ? Math.max(0, Math.floor((now - state.lastFetchAt) / 1000)) : 0;
 
+    // Use the same resolution logic as statusBar/tooltip for consistency
+    const weeklyPct = resolveWeeklyPct(state);
+    const windowPct = resolveWindowPct(state);
+
     return {
-      utilization5h: ((le && le.calibratedAt !== null) ? le.windowPct : (quota?.windowUsedPct ?? 0)) / 100,
-      utilization7d: ((le && le.calibratedAt !== null) ? le.weeklyPct : (quota?.weeklyUsedPct ?? 0)) / 100,
+      utilization5h: windowPct / 100,
+      utilization7d: weeklyPct / 100,
       resetIn5h: quota ? Math.max(0, Math.floor((quota.windowResetAt - now) / 1000)) : 0,
       resetIn7d: quota ? Math.max(0, Math.floor((quota.weeklyResetAt - now) / 1000)) : 0,
       limitStatus: 'allowed',

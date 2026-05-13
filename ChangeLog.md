@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [0.3.15] - 2026-05-13
+
+### Bug 修复
+
+- **修复 `getRateLimits()` 因缓存跳过导致返回 null**：`getRateLimits()` 清空 `latestRateLimits` 后调用 `updateFileState`，但如果文件已在 `fileStates` 缓存中（未变化），`updateFileState` 直接返回现有对象而不重新解析，导致 `latestRateLimits` 始终为 null。现已改为强制重新读取文件并解析，确保每次都能正确提取 rate_limits。
+- **修复 Dashboard 与状态栏/Tooltip 百分比不一致**：`buildKimiUsageData` 之前使用独立的优先级逻辑（`localEstimate` 优先），与状态栏的 `resolveWeeklyPct/resolveWindowPct`（API quota 优先）不一致。现已统一使用 `resolveWeeklyPct/resolveWindowPct`，确保三个界面显示相同的百分比。
+
 ## [0.3.14] - 2026-05-13
 
 ### Bug 修复
