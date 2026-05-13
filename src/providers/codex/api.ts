@@ -171,13 +171,13 @@ export class CodexApiProvider implements IQuotaApiProvider {
     const secondaryResetSec = toInt('x-codex-secondary-reset-after-seconds');
 
     return {
-      weeklyLimit: 0, // Codex headers don't expose absolute limits
-      weeklyUsed: 0,
+      weeklyLimit: 100,
+      weeklyUsed: secondaryPct,
       weeklyUsedPct: secondaryPct,
       weeklyResetAt: secondaryResetSec > 0 ? now + secondaryResetSec * 1000 : now + 7 * 24 * 3600 * 1000,
-      windowLimit: 0,
-      windowUsed: 0,
-      windowRemaining: 0,
+      windowLimit: 100,
+      windowUsed: primaryPct,
+      windowRemaining: Math.max(0, 100 - primaryPct),
       windowUsedPct: primaryPct,
       windowResetAt: primaryResetSec > 0 ? now + primaryResetSec * 1000 : now + 5 * 3600 * 1000,
       parallelLimit: 0,

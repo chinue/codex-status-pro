@@ -256,6 +256,46 @@ export class Scheduler {
       },
     });
 
+    // Even without API or local rate_limits, still scan local session files
+    // so the user sees usage data (tokens, cost, entries) in the status bar.
+    // This is especially important for providers like Claude whose JSONL
+    // does not contain rate_limits — without this, the UI stays blank.
+    const localUsageFallback = await this.localUsageService.getLocalUsage({
+      dataRetentionDays: this.config.dataRetentionDays,
+    });
+    if (localUsageFallback.entries.length > 0) {
+      this.store.dispatch({
+        type: 'LOCAL_ESTIMATE',
+        payload: {
+          cost5h: localUsageFallback.cost5h,
+          cost7d: localUsageFallback.cost7d,
+          costToday: localUsageFallback.costToday,
+          requestsToday: localUsageFallback.requestsToday,
+          tokensToday: localUsageFallback.tokensToday,
+          tokensOutToday: localUsageFallback.tokensOutToday,
+          tokensCacheReadToday: localUsageFallback.tokensCacheReadToday,
+          tokensCacheCreateToday: localUsageFallback.tokensCacheCreateToday,
+          tokensIn5h: localUsageFallback.tokensIn5h,
+          tokensOut5h: localUsageFallback.tokensOut5h,
+          tokensCacheRead5h: localUsageFallback.tokensCacheRead5h,
+          tokensCacheCreate5h: localUsageFallback.tokensCacheCreate5h,
+          requests5h: localUsageFallback.requests5h,
+          tokensIn7d: localUsageFallback.tokensIn7d,
+          tokensOut7d: localUsageFallback.tokensOut7d,
+          tokensCacheRead7d: localUsageFallback.tokensCacheRead7d,
+          tokensCacheCreate7d: localUsageFallback.tokensCacheCreate7d,
+          requests7d: localUsageFallback.requests7d,
+          tokensThisCycle: localUsageFallback.tokensThisCycle,
+          tokensOutThisCycle: localUsageFallback.tokensOutThisCycle,
+          tokensCacheReadThisCycle: localUsageFallback.tokensCacheReadThisCycle,
+          tokensCacheCreateThisCycle: localUsageFallback.tokensCacheCreateThisCycle,
+          costThisCycle: localUsageFallback.costThisCycle,
+          requestsThisCycle: localUsageFallback.requestsThisCycle,
+          entries: localUsageFallback.entries,
+        },
+      });
+    }
+
     const cached = await this.cacheService.read();
     if (cached) {
       this.store.dispatch({ type: 'CACHE_LOADED', payload: cached.quota, fetchedAt: cached.fetchedAt });
@@ -373,15 +413,17 @@ export class Scheduler {
     const weeklyResetAt = secondary?.resets_at
       ? secondary.resets_at * 1000
       : now + (secondary?.resets_in_seconds ?? 7 * 24 * 3600) * 1000;
+    const weeklyUsedPct = secondary?.used_percent ?? 0;
+    const windowUsedPct = primary?.used_percent ?? 0;
     return {
-      weeklyLimit: 0,
-      weeklyUsed: 0,
-      weeklyUsedPct: secondary?.used_percent ?? 0,
+      weeklyLimit: 100,
+      weeklyUsed: weeklyUsedPct,
+      weeklyUsedPct,
       weeklyResetAt,
-      windowLimit: 0,
-      windowUsed: 0,
-      windowRemaining: 0,
-      windowUsedPct: primary?.used_percent ?? 0,
+      windowLimit: 100,
+      windowUsed: windowUsedPct,
+      windowRemaining: Math.max(0, 100 - windowUsedPct),
+      windowUsedPct,
       windowResetAt,
       parallelLimit: 0,
     };

@@ -156,7 +156,12 @@ export class ConfigService {
   }
 
   getPricing(modelName: string): TokenPricing {
-    const key = modelName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const m = modelName.toLowerCase();
+    let key = m.replace(/[^a-z0-9]/g, '');
+    // Claude family mapping
+    if (m.includes('opus')) { key = 'claudeopus'; }
+    else if (m.includes('sonnet')) { key = 'claudesonnet'; }
+    else if (m.includes('haiku')) { key = 'claudehaiku'; }
     const prefix = `pricing.models.${key}`;
     // Default pricing for gpt-5 in USD
     return {

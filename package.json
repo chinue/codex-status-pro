@@ -2,7 +2,7 @@
   "name": "codex-status-pro",
   "displayName": "CodexStatusPro",
   "description": "Monitor Codex token usage and rate limits in real-time",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "kayuii",
   "license": "MIT",
   "repository": {
@@ -263,6 +263,90 @@
           "minimum": 0,
           "order": 83,
           "description": "gpt-5 cache-write token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeOpus.inputPerMillion": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "order": 90,
+          "description": "Claude Opus input token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeOpus.outputPerMillion": {
+          "type": "number",
+          "default": 25,
+          "minimum": 0,
+          "order": 91,
+          "description": "Claude Opus output token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeOpus.cacheReadPerMillion": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "order": 92,
+          "description": "Claude Opus cache-read token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeOpus.cacheCreatePerMillion": {
+          "type": "number",
+          "default": 6.25,
+          "minimum": 0,
+          "order": 93,
+          "description": "Claude Opus cache-write token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeSonnet.inputPerMillion": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "order": 94,
+          "description": "Claude Sonnet input token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeSonnet.outputPerMillion": {
+          "type": "number",
+          "default": 15,
+          "minimum": 0,
+          "order": 95,
+          "description": "Claude Sonnet output token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeSonnet.cacheReadPerMillion": {
+          "type": "number",
+          "default": 0.3,
+          "minimum": 0,
+          "order": 96,
+          "description": "Claude Sonnet cache-read token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeSonnet.cacheCreatePerMillion": {
+          "type": "number",
+          "default": 3.75,
+          "minimum": 0,
+          "order": 97,
+          "description": "Claude Sonnet cache-write token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeHaiku.inputPerMillion": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "order": 98,
+          "description": "Claude Haiku input token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeHaiku.outputPerMillion": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "order": 99,
+          "description": "Claude Haiku output token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeHaiku.cacheReadPerMillion": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0,
+          "order": 100,
+          "description": "Claude Haiku cache-read token price per million (USD)."
+        },
+        "codexStatusPro.pricing.models.claudeHaiku.cacheCreatePerMillion": {
+          "type": "number",
+          "default": 1.25,
+          "minimum": 0,
+          "order": 101,
+          "description": "Claude Haiku cache-write token price per million (USD)."
         },
         "codexStatusPro.pricing.officialUrl": {
           "type": "string",

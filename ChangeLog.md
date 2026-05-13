@@ -1,5 +1,23 @@
 # ChangeLog
 
+## [0.4.1] - 2026-05-13
+
+### 新增
+
+- **Claude Provider 完整实现**：
+  - **鉴权**：读取 `~/.claude/.credentials.json` 的 OAuth accessToken，支持过期检查。
+  - **API**：Anthropic `v1/messages` 探测请求，从 response headers 解析 rate limit（`anthropic-ratelimit-unified-5h-utilization`、`7d-utilization` 等）。
+  - **本地扫描**：递归扫描 `~/.claude/projects/<hash>/*.jsonl`，解析 `type === 'assistant'` 的 usage，按 `requestId` 去重。
+  - **定价**：USD（$），三模型支持（Opus $5/$25、Sonnet $3/$15、Haiku $1/$5 per M tokens），含 cache read/create 定价。
+  - **UI**：图标 `$(claude)`，状态栏显示 "Claude Code Usage"。
+- **Dashboard 模型用量卡片**：各聚合窗口（today / 5h / 7d / 30d / month / allTime）新增模型用量明细卡片，按 cost 降序排列，展示各模型的 tokens 和费用。
+- **package.json 定价配置**：新增 `pricing.models.claudeOpus` / `claudeSonnet` / `claudeHaiku` 四项定价配置项，可在 VS Code 设置中自定义。
+
+### 修复
+
+- **配额百分比映射一致性**：Codex / Claude API 只返回 used_percent（无绝对限额）。统一将 `weeklyLimit` / `windowLimit` 设为 100，`weeklyUsed` / `windowUsed` 设为实际百分比值，确保 Tooltip 和 Dashboard 配额表格始终有数据可显示。
+- **API 失败时本地数据回退**：当 Claude（或其他厂商）API 连接失败且本地 JSONL 不含 `rate_limits` 时，Scheduler 现在会主动扫描本地 session 文件并 dispatch `LOCAL_ESTIMATE`，确保状态栏至少显示本地用量数据（tokens、cost、entries），而不是一直显示加载动画。
+
 ## [0.4.0] - 2026-05-13
 
 ### 新增（重大功能）
