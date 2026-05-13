@@ -239,7 +239,7 @@ export interface HeatmapData {
 
 export interface DailyUsage {
   date: string;      // YYYY-MM-DD local time
-  cost: number;      // RMB
+  cost: number;      // USD
   sessionCount: number;
   tokensTotal: number;
 }

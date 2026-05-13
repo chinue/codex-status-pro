@@ -813,7 +813,7 @@ export class DashboardPanel {
       }
       document.getElementById('badge-5h').textContent = isEstimate ? labels.estimate : '';
       document.getElementById('meta-5h').textContent = usage.resetIn5h > 0 ? fmtReset(Date.now() + usage.resetIn5h * 1000) : '';
-      document.getElementById('cost-5h').textContent = usage.cost5h > 0 ? labels.cost + usage.cost5h.toFixed(2) : '';
+      document.getElementById('cost-5h').textContent = usage.cost5h > 0 ? labels.cost + CURRENCY_SYMBOL + usage.cost5h.toFixed(2) : '';
 
       const fill7d = document.getElementById('fill-7d');
       fill7d.style.width = w7d + '%';
@@ -826,7 +826,7 @@ export class DashboardPanel {
       }
       document.getElementById('badge-7d').textContent = isEstimate ? labels.estimate : '';
       document.getElementById('meta-7d').textContent = usage.resetIn7d > 0 ? fmtReset(Date.now() + usage.resetIn7d * 1000) : '';
-      document.getElementById('cost-7d').textContent = usage.cost7d > 0 ? labels.cost + usage.cost7d.toFixed(2) : '';
+      document.getElementById('cost-7d').textContent = usage.cost7d > 0 ? labels.cost + CURRENCY_SYMBOL + usage.cost7d.toFixed(2) : '';
     }
 
     // ---- Pricing & Settings ----
@@ -1212,7 +1212,7 @@ export class DashboardPanel {
                 },
                 scales: {
                   x: { ticks: xTicks, grid: { display: false } },
-                  y: { ticks: { color: fg, font: { size: 10 }, callback: v => '¥' + Number(v).toFixed(2) }, beginAtZero: true },
+                  y: { ticks: { color: fg, font: { size: 10 }, callback: v => CURRENCY_SYMBOL + Number(v).toFixed(2) }, beginAtZero: true },
                 },
               },
             });
@@ -1446,7 +1446,7 @@ export class DashboardPanel {
               footerFont: { family: tooltipMono, size: 11 },
               callbacks: {
                 title: items => { if (!items || !items.length) return ''; const x = items[0].parsed && typeof items[0].parsed.x === 'number' ? items[0].parsed.x : NaN; return isFinite(x) ? fmtTick(x) : ''; },
-                label: ctx => '¥' + Number(ctx.parsed.y || 0).toFixed(4),
+                label: ctx => CURRENCY_SYMBOL + Number(ctx.parsed.y || 0).toFixed(4),
               },
             },
           },
@@ -1456,7 +1456,7 @@ export class DashboardPanel {
               ticks: { color: fg, font: { size: 8 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, callback: v => fmtTick(Number(v)) },
               grid: { display: false },
             },
-            y: { ticks: { color: fg, font: { size: 10 }, callback: v => '¥' + v }, grid: { color: fg + '22' }, beginAtZero: true },
+            y: { ticks: { color: fg, font: { size: 10 }, callback: v => CURRENCY_SYMBOL + v }, grid: { color: fg + '22' }, beginAtZero: true },
           },
         },
       });
