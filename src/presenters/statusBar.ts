@@ -15,7 +15,7 @@ import { IProvider } from '../providers/base/types';
 
 const STALE_THRESHOLD_MS = 120_000; // 2 minutes
 
-const MOON_FRAMES = ['\uD83C\uDF15', '\uD83C\uDF16', '\uD83C\uDF17', '\uD83C\uDF18'];
+const UPDATE_FRAMES = ['\uD83C\uDF86', '\uD83C\uDF87', '\u2728'];
 // MOON_ANIMATION_INTERVAL_MS is now read from config.updateAnimationIntervalMs (default 300ms)
 
 function alignmentFromString(raw: string): vscode.StatusBarAlignment {
@@ -30,7 +30,7 @@ export class StatusBarPresenter {
   private disposables: vscode.Disposable[] = [];
   private updateAnimInterval: NodeJS.Timeout | null = null;
   private updateAnimTimeout: NodeJS.Timeout | null = null;
-  private moonFrame = 0;
+  private updateFrame = 0;
   private lastSeenWeeklyPct: number | null = null;
   private lastSeenWindowPct: number | null = null;
   private displayName: string;
@@ -158,12 +158,12 @@ export class StatusBarPresenter {
 
       if (this.config.displayMode === 'absolute') {
         if (hasApiData) {
-          this.itemWeekly.text = `\uD83C\uDF18 ${this.displayName}:${state.quota!.weeklyUsed}/${state.quota!.weeklyLimit}${errorIndicator}`;
+          this.itemWeekly.text = `$(openai) ${this.displayName}:${state.quota!.weeklyUsed}/${state.quota!.weeklyLimit}${errorIndicator}`;
         } else {
-          this.itemWeekly.text = `\uD83C\uDF18 ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 1) : '—'}${estimateIndicator}${errorIndicator}`;
+          this.itemWeekly.text = `$(openai) ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 1) : '—'}${estimateIndicator}${errorIndicator}`;
         }
       } else {
-        this.itemWeekly.text = `\uD83C\uDF18 ${this.displayName}:${formatPercent(weeklyPct, 1)}${estimateIndicator}${errorIndicator}`;
+        this.itemWeekly.text = `$(openai) ${this.displayName}:${formatPercent(weeklyPct, 1)}${estimateIndicator}${errorIndicator}`;
       }
 
       this.itemWeekly.command = 'codexStatusPro.showDashboard';
@@ -327,15 +327,15 @@ export class StatusBarPresenter {
     }
 
     // Start new animation — moon cycles while keeping the live percentage visible
-    this.moonFrame = 0;
+    this.updateFrame = 0;
     const weeklyPct = this.lastSeenWeeklyPct ?? 0;
-    this.itemWeekly.text = `${MOON_FRAMES[0]} ${this.displayName}:${formatPercent(weeklyPct, 1)}`;
+    this.itemWeekly.text = `${UPDATE_FRAMES[0]} ${this.displayName}:${formatPercent(weeklyPct, 1)}`;
     this.itemWeekly.show();
 
     this.updateAnimInterval = setInterval(() => {
-      this.moonFrame = (this.moonFrame + 1) % MOON_FRAMES.length;
+      this.updateFrame = (this.updateFrame + 1) % UPDATE_FRAMES.length;
       const liveWeeklyPct = this.lastSeenWeeklyPct ?? 0;
-      this.itemWeekly.text = `${MOON_FRAMES[this.moonFrame]} ${this.displayName}:${formatPercent(liveWeeklyPct, 1)}`;
+      this.itemWeekly.text = `${UPDATE_FRAMES[this.updateFrame]} ${this.displayName}:${formatPercent(liveWeeklyPct, 1)}`;
     }, this.config.updateAnimationIntervalMs);
 
     this.updateAnimTimeout = setTimeout(() => {
