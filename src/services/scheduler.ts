@@ -138,9 +138,11 @@ export class Scheduler {
         ?? fallbackWindowPct(localUsage.cost5h, quota?.windowLimit ?? null))
       : null;
 
-    // When calibration is unavailable, fall back to real-time rate limits from local
-    // session files (same approach as codex-ratelimit-vscode).
-    const rateLimits = await this.localUsageService.getRateLimits();
+    // When calibration is unavailable and there is no API quota at all,
+    // fall back to real-time rate limits from local session files.
+    // We only do this when API is completely missing; otherwise stale local
+    // rate_limits can drift behind the actual API value.
+    const rateLimits = !quota ? await this.localUsageService.getRateLimits() : null;
     const weeklyPctLocal = rateLimits?.secondary?.used_percent;
     const windowPctLocal = rateLimits?.primary?.used_percent;
 

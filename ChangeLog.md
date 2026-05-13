@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [0.3.11] - 2026-05-13
+
+### Bug 修复
+
+- **移除 JSONL 增量解析**：恢复全量解析，彻底消除文件前缀变化导致增量解析出错的潜在风险。codex-status-pro 全程只读 jsonl，不会写入或删除 session 文件。
+- **short tick 不再用本地 rate_limits 覆盖 API 值**：只要 API 成功过（`quota` 存在），short tick 只使用 calibration 估算；仅在 API 完全不可用时才 fallback 到本地 `rate_limits`，避免过时的本地数据覆盖权威 API 百分比。
+
 ## [0.3.10] - 2026-05-13
 
 ### Bug 修复

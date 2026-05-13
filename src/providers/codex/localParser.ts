@@ -184,22 +184,10 @@ export class CodexLocalParser implements ILocalUsageProvider {
     }
 
     const lines = text.split(/\r?\n/);
-    let entries: UnifiedUsageEntry[];
-    let lineCount = lines.length;
-    let lastTotals: CodexTotals | undefined;
-
-    // Incremental parse: if the file grew and we have previous state, try to parse only new lines.
-    // This matches tokscale's approach of resuming from a cached offset.
-    if (existing && existing.size < stat.size && existing.lineCount > 0 && lineCount > existing.lineCount) {
-      const incrementalLines = lines.slice(existing.lineCount);
-      const parsed = this.parseLines(incrementalLines, stat.mtimeMs, existing.lastTotals, existing.lastTotals);
-      entries = [...existing.entries, ...parsed.entries];
-      lastTotals = parsed.lastTotals ?? existing.lastTotals;
-    } else {
-      const parsed = this.parseLines(lines, stat.mtimeMs, undefined, undefined);
-      entries = parsed.entries;
-      lastTotals = parsed.lastTotals;
-    }
+    const parsed = this.parseLines(lines, stat.mtimeMs, undefined, undefined);
+    const entries = parsed.entries;
+    const lineCount = lines.length;
+    const lastTotals = parsed.lastTotals;
 
     const fileState: FileState = { mtimeMs: stat.mtimeMs, size: stat.size, contentHash, entries, lineCount, lastTotals };
     this.fileStates.set(filePath, fileState);
