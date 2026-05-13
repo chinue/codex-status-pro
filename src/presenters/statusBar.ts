@@ -7,7 +7,7 @@ import { makeT } from '../i18n';
 import {
   computeUtilization, formatPercent, formatPercentPadded,
   fmtHours, fmtTokens, fmtCost, fmtDateTime,
-  buildBar, buildMiniBar, drawBorderTable,
+  buildMiniBar,
   resolveWeeklyPct, resolveWindowPct,
 } from '../calc';
 import { AppState } from '../types';
@@ -196,18 +196,56 @@ export class StatusBarPresenter {
     return cfg.statusBarUtilizationColorGte80;
   }
 
+  private createSvgBar(util: number): string {
+    const width = 120;
+    const height = 10;
+    const safe = Math.max(0, Math.min(1, isFinite(util) ? util : 0));
+    const filledWidth = Math.round(safe * width);
+
+    const color = safe >= 0.80 ? this.config.statusBarUtilizationColorGte80
+      : safe >= 0.60 ? this.config.statusBarUtilizationColorLt80
+        : safe >= 0.40 ? this.config.statusBarUtilizationColorLt60
+          : safe >= 0.20 ? this.config.statusBarUtilizationColorLt40
+            : this.config.statusBarUtilizationColorLt20;
+
+    const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${width}" height="${height}" fill="#3c3c3c" rx="2"/>
+      <rect width="${filledWidth}" height="${height}" fill="${color}" rx="2"/>
+    </svg>`;
+
+    const encoded = Buffer.from(svg).toString('base64');
+    return `<img src="data:image/svg+xml;base64,${encoded}" alt="${Math.round(safe * 100)}%" style="vertical-align:middle;"/>`;
+  }
+
+  private htmlTable(header: string[], rows: string[][], aligns: string[] = []): string {
+    const th = header.map((h, i) => {
+      const align = aligns[i] || 'left';
+      return `<th style="text-align:${align};padding:3px 8px;font-weight:600;border-bottom:1px solid var(--vscode-panel-border);white-space:nowrap;">${h}</th>`;
+    }).join('');
+    const trs = rows.map((row, ri) =>
+      `<tr>${row.map((cell, i) => {
+        const align = aligns[i] || 'left';
+        const border = ri < rows.length - 1 ? 'border-bottom:1px solid var(--vscode-panel-border);' : '';
+        return `<td style="text-align:${align};padding:3px 8px;${border}white-space:nowrap;">${cell}</td>`;
+      }).join('')}</tr>`
+    ).join('');
+    return `<table style="border-collapse:collapse;width:100%;font-size:12px;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+  }
+
   private async buildTooltip(state: AppState): Promise<vscode.MarkdownString> {
     const locale = ConfigService.resolveEffectiveLanguage(state.ui.language);
     const t = makeT(locale);
     const md = new vscode.MarkdownString();
+    md.supportHtml = true;
+    md.isTrusted = true;
 
     if (state.authStatus === 'missing') {
-      md.appendMarkdown(`\`\`\`text\n${t('tooltip.title')}\n${'─'.repeat(29)}\n${t('tooltip.notLoggedIn')}\n\`\`\``);
+      md.appendMarkdown(`**${t('tooltip.title')}**\n\n${t('tooltip.notLoggedIn')}`);
       return md;
     }
 
     if (state.authStatus === 'failed') {
-      md.appendMarkdown(`\`\`\`text\n${t('tooltip.title')}\n${'─'.repeat(29)}\n${t('tooltip.authFailed')}\n\`\`\``);
+      md.appendMarkdown(`**${t('tooltip.title')}**\n\n${t('tooltip.authFailed')}`);
       return md;
     }
 
@@ -215,19 +253,15 @@ export class StatusBarPresenter {
     const hasEstimate = !!state.localEstimate;
 
     if (!hasApiData && !hasEstimate) {
-      md.appendMarkdown(`\`\`\`text\n${t('tooltip.title')}\n${'─'.repeat(29)}\n${t('dashboard.loading')}\n\`\`\``);
+      md.appendMarkdown(`**${t('tooltip.title')}**\n\n${t('dashboard.loading')}`);
       return md;
     }
 
     const q = state.quota;
-    const le = state.localEstimate;
     const weeklyPct = resolveWeeklyPct(state);
     const windowPct = resolveWindowPct(state);
     const weeklyUtil = weeklyPct / 100;
     const windowUtil = windowPct / 100;
-
-    const weeklyBar = buildBar(weeklyUtil, 10);
-    const windowBar = buildBar(windowUtil, 10);
 
     const weeklyReset = q && q.weeklyResetAt > Date.now()
       ? fmtHours((q.weeklyResetAt - Date.now()) / 3600000)
@@ -237,83 +271,73 @@ export class StatusBarPresenter {
       : '?';
 
     let sourceLabel = '';
-    if (state.dataSource === 'stale') sourceLabel = ' ' + t('tooltip.stale');
-    else if (state.dataSource === 'local-only') sourceLabel = t('dashboard.estimate');
+    if (state.dataSource === 'stale') { sourceLabel = ' &nbsp;*' + t('tooltip.stale') + '*'; }
+    else if (state.dataSource === 'local-only') { sourceLabel = ' &nbsp;*' + t('dashboard.estimate') + '*'; }
 
-    const lines: string[] = [];
-    lines.push(
-      t('tooltip.title') + sourceLabel,
-      '─────────────────────────────',
-      `${t('tooltip.window5h')}  ${formatPercentPadded(windowPct, 2)} [${windowBar}] ${t('tooltip.resetsIn')} ${windowReset}`,
-      `${t('tooltip.window7d')}  ${formatPercentPadded(weeklyPct, 2)} [${weeklyBar}] ${t('tooltip.resetsIn')} ${weeklyReset}`,
-    );
+    md.appendMarkdown(`### ${this.provider?.ui.mainIcon ?? ''} ${t('tooltip.title')}${sourceLabel}\n\n`);
 
-    // Quota table via drawBorderTable
+    // Window / Weekly progress bars
+    md.appendMarkdown(`<table style="border-collapse:collapse;width:100%;font-size:12px;">`);
+    md.appendMarkdown(`<tr><td style="padding:2px 6px;width:80px;"><strong>${t('tooltip.window5h')}</strong></td>`);
+    md.appendMarkdown(`<td style="padding:2px 6px;">${this.createSvgBar(windowUtil)}</td>`);
+    md.appendMarkdown(`<td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(windowPct, 1)}</strong></td></tr>`);
+    md.appendMarkdown(`<tr><td style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${t('tooltip.resetsIn')}</td>`);
+    md.appendMarkdown(`<td colspan="2" style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${windowReset}</td></tr>`);
+    md.appendMarkdown(`<tr><td style="padding:2px 6px;"><strong>${t('tooltip.window7d')}</strong></td>`);
+    md.appendMarkdown(`<td style="padding:2px 6px;">${this.createSvgBar(weeklyUtil)}</td>`);
+    md.appendMarkdown(`<td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(weeklyPct, 1)}</strong></td></tr>`);
+    md.appendMarkdown(`<tr><td style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${t('tooltip.resetsIn')}</td>`);
+    md.appendMarkdown(`<td colspan="2" style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${weeklyReset}</td></tr>`);
+    md.appendMarkdown(`</table>\n\n`);
+
+    // Quota Summary table
     if (q) {
-      lines.push('');
-      lines.push(t('tooltip.table.quotaSummary'));
-      lines.push('─────────────────────────────');
+      md.appendMarkdown(`**${t('tooltip.table.quotaSummary')}**\n\n`);
       const quotaHeader = ['', t('tooltip.table.col.used'), t('tooltip.table.col.limit'), t('tooltip.table.col.remaining')];
       const quotaRows = [
         [t('tooltip.window5h'), String(q.windowUsed), String(q.windowLimit), String(q.windowRemaining)],
         [t('tooltip.window7d'), String(q.weeklyUsed), String(q.weeklyLimit), String(q.weeklyLimit - q.weeklyUsed)],
       ];
-      lines.push(...drawBorderTable(quotaHeader, quotaRows, ['l', 'r', 'r', 'r']));
+      md.appendMarkdown(this.htmlTable(quotaHeader, quotaRows, ['l', 'r', 'r', 'r']));
       if (q.parallelLimit) {
-        lines.push('', `${t('tooltip.table.col.parallel')}: ${q.parallelLimit}`);
+        md.appendMarkdown(`\n${t('tooltip.table.col.parallel')}: **${q.parallelLimit}**\n`);
       }
+      md.appendMarkdown('\n');
     }
 
-    // Local usage table (from memory — store.localEstimate) via drawBorderTable
+    // Local Usage table
     const lu = state.localEstimate;
     if (lu && (lu.requests5h > 0 || lu.requests7d > 0 || lu.requestsThisCycle > 0)) {
-      lines.push('');
-      lines.push(t('tooltip.localUsage'));
-      lines.push('─────────────────────────────');
+      md.appendMarkdown(`**${t('tooltip.localUsage')}**\n\n`);
       const localHeader = [
-        '',
-        t('tooltip.table.col.input'),
-        t('tooltip.table.col.output'),
-        t('tooltip.table.col.cacheCreate'),
-        t('tooltip.table.col.cacheRead'),
-        t('tooltip.table.col.requests'),
-        t('tooltip.table.col.cost'),
+        '', t('tooltip.table.col.input'), t('tooltip.table.col.output'),
+        t('tooltip.table.col.cacheCreate'), t('tooltip.table.col.cacheRead'),
+        t('tooltip.table.col.requests'), t('tooltip.table.col.cost'),
       ];
       const localRows = [
         [
-          t('tooltip.table.row.today'),
-          fmtTokens(lu.tokensToday),
-          fmtTokens(lu.tokensOutToday),
-          fmtTokens(lu.tokensCacheCreateToday),
-          fmtTokens(lu.tokensCacheReadToday),
-          String(lu.requestsToday),
-          fmtCost(lu.costToday, this.config.currency.symbol),
+          t('tooltip.table.row.today'), fmtTokens(lu.tokensToday), fmtTokens(lu.tokensOutToday),
+          fmtTokens(lu.tokensCacheCreateToday), fmtTokens(lu.tokensCacheReadToday),
+          String(lu.requestsToday), fmtCost(lu.costToday, this.config.currency.symbol),
         ],
         [
-          t('tooltip.table.row.5h'),
-          fmtTokens(lu.tokensIn5h),
-          fmtTokens(lu.tokensOut5h),
-          fmtTokens(lu.tokensCacheCreate5h),
-          fmtTokens(lu.tokensCacheRead5h),
-          String(lu.requests5h),
-          fmtCost(lu.cost5h, this.config.currency.symbol),
+          t('tooltip.table.row.5h'), fmtTokens(lu.tokensIn5h), fmtTokens(lu.tokensOut5h),
+          fmtTokens(lu.tokensCacheCreate5h), fmtTokens(lu.tokensCacheRead5h),
+          String(lu.requests5h), fmtCost(lu.cost5h, this.config.currency.symbol),
         ],
         [
-          t('tooltip.table.row.7d'),
-          fmtTokens(lu.tokensIn7d),
-          fmtTokens(lu.tokensOut7d),
-          fmtTokens(lu.tokensCacheCreate7d),
-          fmtTokens(lu.tokensCacheRead7d),
-          String(lu.requests7d),
-          fmtCost(lu.cost7d, this.config.currency.symbol),
+          t('tooltip.table.row.7d'), fmtTokens(lu.tokensIn7d), fmtTokens(lu.tokensOut7d),
+          fmtTokens(lu.tokensCacheCreate7d), fmtTokens(lu.tokensCacheRead7d),
+          String(lu.requests7d), fmtCost(lu.cost7d, this.config.currency.symbol),
         ],
       ];
-      lines.push(...drawBorderTable(localHeader, localRows, ['l', 'r', 'r', 'r', 'r', 'r', 'r']));
+      md.appendMarkdown(this.htmlTable(localHeader, localRows, ['l', 'r', 'r', 'r', 'r', 'r', 'r']));
+      md.appendMarkdown('\n');
     }
 
-    lines.push('', `${t('tooltip.lastUpdate')} ${state.lastFetchAt ? fmtDateTime(state.lastFetchAt) : '—'}`);
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`<span style="color:var(--vscode-descriptionForeground);font-size:11px;">${t('tooltip.lastUpdate')} ${state.lastFetchAt ? fmtDateTime(state.lastFetchAt) : '—'}</span>`);
 
-    md.appendMarkdown(`\`\`\`text\n${lines.join('\n')}\n\`\`\``);
     return md;
   }
 
