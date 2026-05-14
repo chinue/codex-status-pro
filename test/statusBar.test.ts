@@ -37,7 +37,7 @@ describe('StatusBarPresenter', () => {
     });
     // First data arrival shows the value immediately without animation
     const weeklyText = (presenter as any).itemWeekly.text as string;
-    expect(weeklyText).to.include('25.0%');
+    expect(weeklyText).to.include('25.00%');
   });
 
   it('hides data items and shows moon icon when paused', () => {
@@ -54,7 +54,7 @@ describe('StatusBarPresenter', () => {
     (presenter as any).render(store.getState());
 
     // Before pause: data items visible
-    expect((presenter as any).itemWeekly.text).to.include('25.0%');
+    expect((presenter as any).itemWeekly.text).to.include('25.00%');
 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: true });
     // After pause: weekly item shows only the provider icon, window hidden
@@ -65,6 +65,6 @@ describe('StatusBarPresenter', () => {
     store.dispatch({ type: 'UI_SET_PAUSED', payload: false });
     // After resume: data items visible again
     expect((presenter as any).itemWeekly.visible).to.be.true;
-    expect((presenter as any).itemWeekly.text).to.include('25.0%');
+    expect((presenter as any).itemWeekly.text).to.include('25.00%');
   });
 });

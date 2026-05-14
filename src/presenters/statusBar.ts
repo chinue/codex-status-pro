@@ -140,10 +140,10 @@ export class StatusBarPresenter {
         if (hasApiData) {
           this.itemWindow.text = `5\uFE0F\u20E3 ${state.quota!.windowUsed}/${state.quota!.windowLimit}${staleIndicator}`;
         } else {
-          this.itemWindow.text = `5\uFE0F\u20E3 ${windowPct > 0 ? '~' + formatPercent(windowPct, 1) : '—'}${staleIndicator}`;
+          this.itemWindow.text = `5\uFE0F\u20E3 ${windowPct > 0 ? '~' + formatPercent(windowPct, 2) : '—'}${staleIndicator}`;
         }
       } else {
-        this.itemWindow.text = `5\uFE0F\u20E3 ${buildMiniBar(windowUtil, 5)} ${formatPercent(windowPct, 1)}${staleIndicator}`;
+        this.itemWindow.text = `5\uFE0F\u20E3 ${buildMiniBar(windowUtil, 5)} ${formatPercent(windowPct, 2)}${staleIndicator}`;
       }
       this.itemWindow.color = this.utilizationToColor(windowUtil);
       this.itemWindow.show();
@@ -159,11 +159,11 @@ export class StatusBarPresenter {
       this.itemWeekly.text = `${icon} ${this.displayName}:${state.quota!.weeklyUsed}/${state.quota!.weeklyLimit}${sourceIndicator}`;
         } else {
           const icon = this.provider?.ui.mainIcon ?? '$(openai)';
-          this.itemWeekly.text = `${icon} ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 1) : '—'}${sourceIndicator}`;
+          this.itemWeekly.text = `${icon} ${this.displayName}:${weeklyPct > 0 ? '~' + formatPercent(weeklyPct, 2) : '—'}${sourceIndicator}`;
         }
       } else {
         const icon = this.provider?.ui.mainIcon ?? '$(openai)';
-        this.itemWeekly.text = `${icon} ${this.displayName}:${formatPercent(weeklyPct, 1)}${sourceIndicator}`;
+        this.itemWeekly.text = `${icon} ${this.displayName}:${formatPercent(weeklyPct, 2)}${sourceIndicator}`;
       }
 
       this.itemWeekly.command = 'codexStatusPro.showDashboard';
@@ -265,9 +265,9 @@ export class StatusBarPresenter {
 
     // Progress bars as HTML block (layout only)
     parts.push(`<table style="border-collapse:collapse;width:100%;font-size:12px;">`);
-    parts.push(`<tr><td style="padding:2px 6px;width:80px;"><strong>${t('tooltip.window5h')}</strong></td><td style="padding:2px 6px;">${this.createSvgBar(windowUtil)}</td><td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(windowPct, 1)}</strong></td></tr>`);
+    parts.push(`<tr><td style="padding:2px 6px;width:80px;"><strong>${t('tooltip.window5h')}</strong></td><td style="padding:2px 6px;">${this.createSvgBar(windowUtil)}</td><td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(windowPct, 2)}</strong></td></tr>`);
     parts.push(`<tr><td style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${t('tooltip.nextReset')}</td><td colspan="2" style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${windowResetText}</td></tr>`);
-    parts.push(`<tr><td style="padding:2px 6px;"><strong>${t('tooltip.window7d')}</strong></td><td style="padding:2px 6px;">${this.createSvgBar(weeklyUtil)}</td><td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(weeklyPct, 1)}</strong></td></tr>`);
+    parts.push(`<tr><td style="padding:2px 6px;"><strong>${t('tooltip.window7d')}</strong></td><td style="padding:2px 6px;">${this.createSvgBar(weeklyUtil)}</td><td style="padding:2px 6px;text-align:right;white-space:nowrap;"><strong>${formatPercent(weeklyPct, 2)}</strong></td></tr>`);
     parts.push(`<tr><td style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${t('tooltip.nextReset')}</td><td colspan="2" style="padding:2px 6px;color:var(--vscode-descriptionForeground);">${weeklyResetText}</td></tr>`);
     parts.push(`</table>`);
     parts.push('');
@@ -297,13 +297,13 @@ export class StatusBarPresenter {
       parts.push(`**${t('tooltip.localUsage')}**`);
       parts.push('');
       parts.push(this.preTable(
-        ['', t('tooltip.table.col.input'), t('tooltip.table.col.output'), t('tooltip.table.col.cost')],
+        ['', t('tooltip.table.col.input'), t('tooltip.table.col.output'), t('tooltip.table.col.cacheRead'), t('tooltip.table.col.cacheCreate'), t('tooltip.table.col.cost')],
         [
-          [t('tooltip.table.row.today'), fmtTokens(lu.tokensToday), fmtTokens(lu.tokensOutToday), fmtCost(lu.costToday, this.config.currency.symbol)],
-          [t('tooltip.table.row.5h'), fmtTokens(lu.tokensIn5h), fmtTokens(lu.tokensOut5h), fmtCost(lu.cost5h, this.config.currency.symbol)],
-          [t('tooltip.table.row.7d'), fmtTokens(lu.tokensIn7d), fmtTokens(lu.tokensOut7d), fmtCost(lu.cost7d, this.config.currency.symbol)],
+          [t('tooltip.table.row.today'), fmtTokens(lu.tokensToday), fmtTokens(lu.tokensOutToday), fmtTokens(lu.tokensCacheReadToday), fmtTokens(lu.tokensCacheCreateToday), fmtCost(lu.costToday, this.config.currency.symbol)],
+          [t('tooltip.table.row.5h'), fmtTokens(lu.tokensIn5h), fmtTokens(lu.tokensOut5h), fmtTokens(lu.tokensCacheRead5h), fmtTokens(lu.tokensCacheCreate5h), fmtCost(lu.cost5h, this.config.currency.symbol)],
+          [t('tooltip.table.row.7d'), fmtTokens(lu.tokensIn7d), fmtTokens(lu.tokensOut7d), fmtTokens(lu.tokensCacheRead7d), fmtTokens(lu.tokensCacheCreate7d), fmtCost(lu.cost7d, this.config.currency.symbol)],
         ],
-        ['l', 'r', 'r', 'r']
+        ['l', 'r', 'r', 'r', 'r', 'r']
       ));
       parts.push('');
     }
@@ -359,13 +359,13 @@ export class StatusBarPresenter {
     // Start new animation — moon cycles while keeping the live percentage visible
     this.updateFrame = 0;
     const weeklyPct = this.lastSeenWeeklyPct ?? 0;
-    this.itemWeekly.text = `${UPDATE_FRAMES[0]} ${this.displayName}:${formatPercent(weeklyPct, 1)}${suffix}`;
+    this.itemWeekly.text = `${UPDATE_FRAMES[0]} ${this.displayName}:${formatPercent(weeklyPct, 2)}${suffix}`;
     this.itemWeekly.show();
 
     this.updateAnimInterval = setInterval(() => {
       this.updateFrame = (this.updateFrame + 1) % UPDATE_FRAMES.length;
       const liveWeeklyPct = this.lastSeenWeeklyPct ?? 0;
-      this.itemWeekly.text = `${UPDATE_FRAMES[this.updateFrame]} ${this.displayName}:${formatPercent(liveWeeklyPct, 1)}${suffix}`;
+      this.itemWeekly.text = `${UPDATE_FRAMES[this.updateFrame]} ${this.displayName}:${formatPercent(liveWeeklyPct, 2)}${suffix}`;
     }, this.config.updateAnimationIntervalMs);
 
     this.updateAnimTimeout = setTimeout(() => {
