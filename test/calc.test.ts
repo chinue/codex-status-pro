@@ -351,7 +351,7 @@ describe('estimateStateMemory', () => {
     const result = estimateStateMemory(state);
     expect(result.totalBytes).to.be.greaterThan(0);
     expect(result.items).to.have.length(1);
-    expect(result.items[0].name).to.equal('storeOverhead');
+    expect(result.items[0].name).to.equal('Store.storeOverhead');
   });
 
   it('estimates usageEntries memory', () => {
@@ -367,7 +367,7 @@ describe('estimateStateMemory', () => {
     }));
     const state = makeState({ usageEntries: entries });
     const result = estimateStateMemory(state);
-    const entryItem = result.items.find((i) => i.name === 'usageEntries');
+    const entryItem = result.items.find((i) => i.name === 'Store.usageEntries');
     expect(entryItem).to.exist;
     expect(entryItem!.bytes).to.be.greaterThan(0);
     expect(result.totalBytes).to.be.greaterThan(entryItem!.bytes);

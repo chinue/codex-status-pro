@@ -1,5 +1,18 @@
 # ChangeLog
 
+## [0.5.2] - 2026-05-13
+
+### 改进
+
+- **Dashboard 内存占用表格 UI/UX 全面优化**：
+  - 按钮图标改为 `🔺🖥️`（展开）/ `🔻🖥️`（收起），更加直观
+  - 表头（模块/内存大小/说明）和按钮文案支持 i18n 中英文切换
+  - 模块名显示完整路径：`Store.usageEntries`、`Store.localEstimate`、`Store.quota`、`Store.storeOverhead`
+  - 点击表格行可展开该模块具体存储数据（最多 20 条）：
+    - `Store.usageEntries`：列出最近 20 条使用记录（时间/模型/费用）
+    - `Store.localEstimate` / `Store.quota`：列出所有字段 key-value
+    - `Store.storeOverhead`：显示固定说明文本
+
 ## [0.5.1] - 2026-05-13
 
 ### 新增

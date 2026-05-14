@@ -227,6 +227,29 @@ export class DashboardPanel {
 
     const mem = estimateStateMemory(state);
 
+    // Build memory detail samples for expandable rows
+    const memoryEntrySamples = state.usageEntries && state.usageEntries.length > 0
+      ? state.usageEntries.slice(-20).reverse().map(e => ({
+          timestamp: e.timestamp,
+          messageId: e.messageId,
+          model: e.model,
+          cost: e.cost,
+        }))
+      : undefined;
+    const memoryLocalEstimate = state.localEstimate
+      ? Object.fromEntries(
+          Object.entries(state.localEstimate)
+            .filter(([, v]) => v != null)
+            .map(([k, v]) => [k, typeof v === 'number' ? Number(v.toFixed(4)) : v]),
+        )
+      : undefined;
+    const memoryQuota = state.quota
+      ? Object.fromEntries(
+          Object.entries(state.quota)
+            .filter(([, v]) => v != null && v !== 0),
+        )
+      : undefined;
+
     return {
       utilization5h: windowPct / 100,
       utilization7d: weeklyPct / 100,
@@ -261,6 +284,9 @@ export class DashboardPanel {
       dataSource: state.dataSource,
       memoryBreakdown: mem.items,
       memoryTotalBytes: mem.totalBytes,
+      memoryEntrySamples,
+      memoryLocalEstimate,
+      memoryQuota,
     };
   }
 
@@ -575,14 +601,14 @@ export class DashboardPanel {
       </div>
     </div>
     <div class="memory-section" style="margin-top:10px;">
-      <button class="detail-toggle" id="memory-toggle" style="font-size:0.85em;">🧠 内存占用</button>
+      <button class="detail-toggle" id="memory-toggle" style="font-size:0.85em;">🔺🖥️${i18n('dashboard.memoryUsage')}</button>
       <div id="memory-body" style="display:none;margin-top:8px;">
         <table class="ccu-table" id="memory-table">
-          <thead><tr><th>模块</th><th>内存大小</th><th>说明</th></tr></thead>
+          <thead><tr><th>${i18n('dashboard.memoryModule')}</th><th>${i18n('dashboard.memorySize')}</th><th>${i18n('dashboard.memoryDescription')}</th></tr></thead>
           <tbody id="memory-tbody"></tbody>
         </table>
         <div style="margin-top:6px;font-size:0.85em;color:var(--vscode-descriptionForeground);text-align:right;">
-          总计: <span id="memory-total">—</span>
+          ${i18n('dashboard.memoryTotal')}: <span id="memory-total">—</span>
         </div>
       </div>
     </div>
@@ -678,6 +704,7 @@ export class DashboardPanel {
     let historyOpen = true;
     let costCurveOpen = true;
     let memoryOpen = false;
+    let expandedMemoryRow = null;
     let chartHeightRatio = 0.4;
     let ccuTab = 'w5h';
     let historyRange = '5h';
@@ -764,6 +791,14 @@ export class DashboardPanel {
     document.getElementById('history-toggle').addEventListener('click', toggleHistory);
     document.getElementById('costcurve-toggle').addEventListener('click', toggleCostCurve);
     document.getElementById('memory-toggle').addEventListener('click', toggleMemory);
+    document.getElementById('memory-tbody').addEventListener('click', (e) => {
+      const row = e.target && e.target.closest && e.target.closest('tr[data-memory-row]');
+      if (!row) return;
+      const name = row.getAttribute('data-memory-row');
+      if (!name) return;
+      expandedMemoryRow = expandedMemoryRow === name ? null : name;
+      if (lastData) renderCurrentUsage(lastData.usage, currentDisplayMode);
+    });
 
     document.getElementById('ccu-tabs').addEventListener('click', (e) => {
       const btn = e.target && e.target.closest && e.target.closest('button.ccu-tab');
@@ -866,8 +901,48 @@ export class DashboardPanel {
         const totalText = lastData && lastData.usage && lastData.usage.memoryTotalBytes
           ? ' (' + fmtMemSize(lastData.usage.memoryTotalBytes) + ')'
           : '';
-        btn.textContent = (memoryOpen ? '🔽 ' : '🧠 ') + '内存占用' + totalText;
+        btn.textContent = (memoryOpen ? '🔻🖥️' : '🔺🖥️') + '${i18n('dashboard.memoryUsage')}' + totalText;
       }
+    }
+
+    function renderMemoryDetail(name, usage) {
+      const detailLabels = {
+        'Store.usageEntries': '${i18n('dashboard.memoryDetail.usageEntries')}',
+        'Store.localEstimate': '${i18n('dashboard.memoryDetail.localEstimate')}',
+        'Store.quota': '${i18n('dashboard.memoryDetail.quota')}',
+        'Store.storeOverhead': '${i18n('dashboard.memoryDetail.storeOverhead')}',
+      };
+      const title = detailLabels[name] || name;
+      let body = '';
+      if (name === 'Store.usageEntries' && usage.memoryEntrySamples && usage.memoryEntrySamples.length > 0) {
+        body += '<table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><thead><tr><th>Time</th><th>Model</th><th>Cost</th></tr></thead><tbody>';
+        for (const s of usage.memoryEntrySamples) {
+          const d = new Date(s.timestamp);
+          const timeStr = (d.getMonth()+1) + '-' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+          body += '<tr><td class="ccu-key">' + esc(timeStr) + '</td><td class="ccu-key">' + esc(s.model || '') + '</td><td class="ccu-num">' + fmtCurrency(s.cost) + '</td></tr>';
+        }
+        body += '</tbody></table>';
+      } else if (name === 'Store.localEstimate' && usage.memoryLocalEstimate) {
+        body += '<table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><tbody>';
+        for (const [k, v] of Object.entries(usage.memoryLocalEstimate)) {
+          body += '<tr><td class="ccu-key">' + esc(k) + '</td><td class="ccu-num">' + esc(String(v)) + '</td></tr>';
+        }
+        body += '</tbody></table>';
+      } else if (name === 'Store.quota' && usage.memoryQuota) {
+        body += '<table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><tbody>';
+        for (const [k, v] of Object.entries(usage.memoryQuota)) {
+          body += '<tr><td class="ccu-key">' + esc(k) + '</td><td class="ccu-num">' + esc(String(v)) + '</td></tr>';
+        }
+        body += '</tbody></table>';
+      } else if (name === 'Store.storeOverhead') {
+        body += '<div style="padding:6px 8px;font-size:0.82em;color:var(--vscode-descriptionForeground);">' + esc(title) + '</div>';
+      } else {
+        body += '<div style="padding:6px 8px;font-size:0.82em;color:var(--vscode-descriptionForeground);">No detail available</div>';
+      }
+      return '<div style="background:var(--vscode-input-background);border:1px solid var(--vscode-panel-border);border-radius:4px;margin:2px 8px 6px;">' +
+        '<div style="padding:4px 8px;font-weight:600;font-size:0.82em;border-bottom:1px solid var(--vscode-panel-border);">' + esc(title) + '</div>' +
+        body +
+        '</div>';
     }
 
     function fmtMemSize(bytes) {
@@ -913,16 +988,22 @@ export class DashboardPanel {
       const memTbody = document.getElementById('memory-tbody');
       const memTotal = document.getElementById('memory-total');
       if (memBtn && usage.memoryTotalBytes != null) {
-        memBtn.textContent = (memoryOpen ? '🔽 ' : '🧠 ') + '内存占用 (' + fmtMemSize(usage.memoryTotalBytes) + ')';
+        memBtn.textContent = (memoryOpen ? '🔻🖥️' : '🔺🖥️') + '${i18n('dashboard.memoryUsage')}' + ' (' + fmtMemSize(usage.memoryTotalBytes) + ')';
       }
       if (memTbody && usage.memoryBreakdown) {
-        memTbody.innerHTML = usage.memoryBreakdown.map(item =>
-          '<tr>' +
-          '<td class="ccu-key">' + esc(item.name) + '</td>' +
-          '<td class="ccu-num">' + fmtMemSize(item.bytes) + '</td>' +
-          '<td style="text-align:left;font-size:0.85em;color:var(--vscode-descriptionForeground);">' + esc(item.description) + '</td>' +
-          '</tr>'
-        ).join('');
+        let html = '';
+        for (const item of usage.memoryBreakdown) {
+          const isExpanded = expandedMemoryRow === item.name;
+          html += '<tr class="ccu-row" data-memory-row="' + esc(item.name) + '">' +
+            '<td class="ccu-key">' + esc(item.name) + '</td>' +
+            '<td class="ccu-num">' + fmtMemSize(item.bytes) + '</td>' +
+            '<td style="text-align:left;font-size:0.85em;color:var(--vscode-descriptionForeground);">' + esc(item.description) + '</td>' +
+            '</tr>';
+          if (isExpanded) {
+            html += '<tr><td colspan="3" style="padding:0;border:none;">' + renderMemoryDetail(item.name, usage) + '</td></tr>';
+          }
+        }
+        memTbody.innerHTML = html;
       }
       if (memTotal && usage.memoryTotalBytes != null) {
         memTotal.textContent = fmtMemSize(usage.memoryTotalBytes);

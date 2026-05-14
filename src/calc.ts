@@ -491,7 +491,7 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
   );
   if (usageEntriesBytes > 0) {
     items.push({
-      name: 'usageEntries',
+      name: 'Store.usageEntries',
       bytes: usageEntriesBytes,
       description: 'Retention-period usage entries for heatmap / detail',
     });
@@ -501,7 +501,7 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
   const localEstimateBytes = state.localEstimate ? 1024 : 0;
   if (localEstimateBytes > 0) {
     items.push({
-      name: 'localEstimate',
+      name: 'Store.localEstimate',
       bytes: localEstimateBytes,
       description: 'Local estimate state (P/C/k + aggregated costs/tokens)',
     });
@@ -511,7 +511,7 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
   const quotaBytes = state.quota ? 512 : 0;
   if (quotaBytes > 0) {
     items.push({
-      name: 'quota',
+      name: 'Store.quota',
       bytes: quotaBytes,
       description: 'API quota data (limits / used / reset times)',
     });
@@ -519,7 +519,7 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
 
   // 4. Store overhead (listeners, UI state, etc.)
   items.push({
-    name: 'storeOverhead',
+    name: 'Store.storeOverhead',
     bytes: 2048,
     description: 'Store listeners, UI state, provider refs',
   });

@@ -202,6 +202,16 @@ export interface KimiUsageData {
   // Memory breakdown (optional)
   memoryBreakdown?: MemoryBreakdownItem[];
   memoryTotalBytes?: number;
+
+  // Memory detail samples for expandable rows
+  memoryEntrySamples?: Array<{
+    timestamp: number;
+    messageId: string | null;
+    model?: string;
+    cost: number;
+  }>;
+  memoryLocalEstimate?: Record<string, number | string | null>;
+  memoryQuota?: Record<string, number | string | null>;
 }
 
 export interface MemoryBreakdownItem {
