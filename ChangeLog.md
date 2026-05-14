@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [0.4.4] - 2026-05-13
+
+### 修复
+
+- **Tooltip 表格改用 `<pre>` ASCII 字符表**：VS Code tooltip 中 HTML/CSS border 和 Markdown 原生表格的边框渲染均不可靠（受主题和 `supportHtml` 交互影响）。改用 `<pre>` 标签包裹 ASCII 字符表格（`+─┼─+` 边框 + 等宽字体对齐），确保边框可见、列对齐稳定。
+
 ## [0.4.3] - 2026-05-13
 
 ### 修复
