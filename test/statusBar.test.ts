@@ -57,9 +57,9 @@ describe('StatusBarPresenter', () => {
     expect((presenter as any).itemWeekly.text).to.include('25.0%');
 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: true });
-    // After pause: weekly item shows dormant moon icon, window hidden
+    // After pause: weekly item shows only the provider icon, window hidden
     expect((presenter as any).itemWeekly.visible).to.be.true;
-    expect((presenter as any).itemWeekly.text).to.include('\uD83C\uDF18');
+    expect((presenter as any).itemWeekly.text).to.equal('$(openai)');
     expect((presenter as any).itemWindow.visible).to.be.false;
 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: false });

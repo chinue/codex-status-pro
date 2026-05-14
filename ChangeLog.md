@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [0.4.7] - 2026-05-13
+
+### 修复
+
+- **Tooltip 按钮点击失效**：`supportHtml = true` 时 markdown-it 将 `<div>` 内内容视为 HTML 块，不再解析 Markdown 链接语法 `[label](command:xxx)`。改用 HTML `<a href="command:xxx">` 标签，按钮点击恢复正常。
+- **Tooltip 布局调整**：
+  - "上次更新" 从按钮下方移到按钮上方，并追加版本号（如 `· v0.4.7`）。
+  - 暂停按钮文字简化为 "Pause" / "Resume"（去除 "auto-refresh"）。
+- **状态栏精简**：
+  - 移除版本号 `itemVersion`，状态栏只保留 `itemWeekly` 和 `itemWindow`。
+  - 暂停时 `itemWeekly` 仅显示厂商主图标（如 `$(openai)`），不显示任何文字。
+
 ## [0.4.6] - 2026-05-13
 
 ### 变更
