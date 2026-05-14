@@ -1,5 +1,14 @@
 # ChangeLog
 
+## [0.5.6] - 2026-05-13
+
+### 改进
+
+- **Dashboard 时间格式化统一**：所有时间戳以 `YYYY-MM-DD HH:mm:ss.SSS` 显示（usageEntries / estHistory / quota 的 ResetAt 字段）
+- **CSV 时间戳保持原始整数**：导出时不受格式化影响
+- **EstHistoryEntry 新增窗口起始时间**：`windowStartMs`（5h 窗口开始）/ `weeklyStartMs`（7d 窗口开始），Scheduler 中通过 `resolveResetTime` 推算后填入
+- **Dashboard estHistory 展开表格**：新增 `windowStartMs` / `weeklyStartMs` 两列，同步格式化显示
+
 ## [0.5.5] - 2026-05-13
 
 ### 改进

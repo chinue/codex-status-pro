@@ -381,7 +381,7 @@ export class DashboardPanel {
           .join('\n');
         defaultName = 'quota.csv';
       } else if (moduleName === 'Store.estHistory' && state.estHistory.length > 0) {
-        const header = ['timestamp', 'source', 'apiWeeklyPct', 'apiWindowPct', 'estimatedWeeklyPct', 'estimatedWindowPct', 'localCost7d', 'localCost5h', 'weeklyP', 'weeklyC', 'weeklyK', 'windowP', 'windowC', 'windowK'];
+        const header = ['timestamp', 'source', 'apiWeeklyPct', 'apiWindowPct', 'estimatedWeeklyPct', 'estimatedWindowPct', 'localCost7d', 'localCost5h', 'weeklyP', 'weeklyC', 'weeklyK', 'windowP', 'windowC', 'windowK', 'windowStartMs', 'weeklyStartMs'];
         csv = header.join(',') + '\n' + state.estHistory.map(h =>
           [Math.round(h.timestamp),
             h.source,
@@ -389,7 +389,8 @@ export class DashboardPanel {
             h.estimatedWeeklyPct, h.estimatedWindowPct,
             h.localCost7d, h.localCost5h,
             h.weeklyP, h.weeklyC, h.weeklyK,
-            h.windowP, h.windowC, h.windowK].join(','),
+            h.windowP, h.windowC, h.windowK,
+            h.windowStartMs, h.weeklyStartMs].join(','),
         ).join('\n');
         defaultName = 'est-history.csv';
       } else {
@@ -1014,7 +1015,7 @@ export class DashboardPanel {
         for (const s of usage.memoryEntrySamples) {
           const msgId = s.messageId ? (s.messageId.length > 12 ? s.messageId.slice(0, 12) + '…' : s.messageId) : '';
           body += '<tr>' +
-            '<td class="ccu-key">' + Math.round(s.timestamp) + '</td>' +
+            '<td class="ccu-key">' + fmtTimestamp(s.timestamp) + '</td>' +
             '<td class="ccu-num">' + fmtNum(s.inputOther) + '</td>' +
             '<td class="ccu-num">' + fmtNum(s.output) + '</td>' +
             '<td class="ccu-num">' + fmtNum(s.inputCacheRead) + '</td>' +
@@ -1041,9 +1042,18 @@ export class DashboardPanel {
         for (const [k, v] of Object.entries(usage.memoryQuota)) {
           const t = typeof v;
           if (t !== 'number' && t !== 'string' && t !== 'boolean') continue;
-          const display = t === 'number'
-            ? (Number.isInteger(v) ? fmtNum(v) : (isFinite(v) ? Number(v).toFixed(4) : '0.0000'))
-            : String(v);
+          let display;
+          if (t === 'number') {
+            if (k.includes('At') && v > 1e12) {
+              display = fmtTimestamp(v);
+            } else if (Number.isInteger(v)) {
+              display = fmtNum(v);
+            } else {
+              display = isFinite(v) ? Number(v).toFixed(4) : '0.0000';
+            }
+          } else {
+            display = String(v);
+          }
           body += '<tr><td class="ccu-key">' + esc(k) + '</td><td class="ccu-num">' + esc(display) + '</td></tr>';
         }
         body += '</tbody></table>';
@@ -1051,13 +1061,13 @@ export class DashboardPanel {
         const x = usage.estHistory.length;
         const y = usage.estHistoryCount || x;
         title = baseTitle + ' (' + x + '/' + y + ')';
-        const headers = ['timestamp', 'source', 'apiWeeklyPct', 'apiWindowPct', 'estimatedWeeklyPct', 'estimatedWindowPct', 'localCost7d', 'localCost5h', 'weeklyP', 'weeklyC', 'weeklyK', 'windowP', 'windowC', 'windowK'];
-        body += '<div style="overflow-x:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.78em;min-width:1200px;"><thead><tr>' +
+        const headers = ['timestamp', 'source', 'apiWeeklyPct', 'apiWindowPct', 'estimatedWeeklyPct', 'estimatedWindowPct', 'localCost7d', 'localCost5h', 'weeklyP', 'weeklyC', 'weeklyK', 'windowP', 'windowC', 'windowK', 'windowStartMs', 'weeklyStartMs'];
+        body += '<div style="overflow-x:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.78em;min-width:1400px;"><thead><tr>' +
           headers.map(h => '<th>' + esc(h) + '</th>').join('') +
           '</tr></thead><tbody>';
         for (const h of usage.estHistory) {
           body += '<tr>' +
-            '<td class="ccu-key">' + Math.round(h.timestamp) + '</td>' +
+            '<td class="ccu-key">' + fmtTimestamp(h.timestamp) + '</td>' +
             '<td class="ccu-key">' + esc(h.source) + '</td>' +
             '<td class="ccu-num">' + (h.apiWeeklyPct != null ? h.apiWeeklyPct.toFixed(4) : '-') + '</td>' +
             '<td class="ccu-num">' + (h.apiWindowPct != null ? h.apiWindowPct.toFixed(4) : '-') + '</td>' +
@@ -1071,6 +1081,8 @@ export class DashboardPanel {
             '<td class="ccu-num">' + (isFinite(h.windowP) ? h.windowP.toFixed(4) : '0.0000') + '</td>' +
             '<td class="ccu-num">' + (isFinite(h.windowC) ? h.windowC.toFixed(4) : '0.0000') + '</td>' +
             '<td class="ccu-num">' + (isFinite(h.windowK) ? h.windowK.toFixed(4) : '0.0000') + '</td>' +
+            '<td class="ccu-key">' + fmtTimestamp(h.windowStartMs) + '</td>' +
+            '<td class="ccu-key">' + fmtTimestamp(h.weeklyStartMs) + '</td>' +
             '</tr>';
         }
         body += '</tbody></table></div>';
@@ -1083,6 +1095,18 @@ export class DashboardPanel {
         '<div style="padding:4px 8px;font-weight:600;font-size:0.82em;border-bottom:1px solid var(--vscode-panel-border);">' + esc(title) + '</div>' +
         body +
         '</div>';
+    }
+
+    function fmtTimestamp(ms) {
+      const d = new Date(ms);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      const ss = String(d.getSeconds()).padStart(2, '0');
+      const mss = String(d.getMilliseconds()).padStart(3, '0');
+      return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + min + ':' + ss + '.' + mss;
     }
 
     function fmtMemSize(bytes) {

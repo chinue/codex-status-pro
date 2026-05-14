@@ -93,6 +93,8 @@ export interface EstHistoryEntry {
   windowP: number;
   windowC: number;
   windowK: number;
+  windowStartMs: number;   // 5h window start timestamp
+  weeklyStartMs: number;   // 7d window start timestamp
 }
 
 export interface AppState {

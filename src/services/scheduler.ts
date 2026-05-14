@@ -207,6 +207,8 @@ export class Scheduler {
     // Record short-tick estimator history
     const le = state.localEstimate;
     const cfg = this.config;
+    const shortWeeklyResetAtMs = resolveResetTime(quota?.weeklyResetAt, 7 * 24 * 3600 * 1000).resetAt;
+    const shortWindowResetAtMs = resolveResetTime(quota?.windowResetAt, 5 * 3600 * 1000).resetAt;
     this.store.dispatch({
       type: 'API_HISTORY',
       payload: {
@@ -226,6 +228,8 @@ export class Scheduler {
           windowP: le?.windowP ?? 0,
           windowC: le?.windowC ?? 0,
           windowK: le?.windowK ?? 0,
+          windowStartMs: Math.round(shortWindowResetAtMs - 5 * 3600 * 1000),
+          weeklyStartMs: Math.round(shortWeeklyResetAtMs - 7 * 24 * 3600 * 1000),
         },
       },
     });
@@ -445,6 +449,8 @@ export class Scheduler {
 
     // Record estimator history for accuracy evaluation
     const cfg = this.config;
+    const effWindowReset = resolveResetTime(quotaData.windowResetAt, 5 * 3600 * 1000, now).resetAt;
+    const effWeeklyReset = resolveResetTime(quotaData.weeklyResetAt, 7 * 24 * 3600 * 1000, now).resetAt;
     this.store.dispatch({
       type: 'API_HISTORY',
       payload: {
@@ -464,6 +470,8 @@ export class Scheduler {
           windowP: windowEstimator.P,
           windowC: windowEstimator.C,
           windowK: windowEstimator.k,
+          windowStartMs: Math.round(effWindowReset - 5 * 3600 * 1000),
+          weeklyStartMs: Math.round(effWeeklyReset - 7 * 24 * 3600 * 1000),
         },
       },
     });

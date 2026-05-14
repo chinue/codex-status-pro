@@ -378,6 +378,8 @@ describe('estimateStateMemory', () => {
         windowP: 20,
         windowC: 2,
         windowK: 10,
+        windowStartMs: Date.now() - 5 * 3600 * 1000,
+        weeklyStartMs: Date.now() - 7 * 24 * 3600 * 1000,
       })),
     });
     const result = estimateStateMemory(state);

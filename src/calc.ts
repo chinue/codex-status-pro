@@ -518,7 +518,7 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
   }
 
   // 4. estHistory
-  const estHistoryBytes = state.estHistory.length * (15 * 8);
+  const estHistoryBytes = state.estHistory.length * (17 * 8);
   if (estHistoryBytes > 0) {
     items.push({
       name: 'Store.estHistory',
