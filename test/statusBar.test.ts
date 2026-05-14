@@ -57,15 +57,14 @@ describe('StatusBarPresenter', () => {
     expect((presenter as any).itemWeekly.text).to.include('25.0%');
 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: true });
-    // After pause: data items hidden, pause item shows moon
-    expect((presenter as any).itemWeekly.visible).to.be.false;
+    // After pause: weekly item shows dormant moon icon, window hidden
+    expect((presenter as any).itemWeekly.visible).to.be.true;
+    expect((presenter as any).itemWeekly.text).to.include('\uD83C\uDF18');
     expect((presenter as any).itemWindow.visible).to.be.false;
-    expect((presenter as any).itemPause.text).to.equal('\uD83C\uDF18');
 
     store.dispatch({ type: 'UI_SET_PAUSED', payload: false });
-    // After resume: data items visible again, pause item shows pause symbol
+    // After resume: data items visible again
     expect((presenter as any).itemWeekly.visible).to.be.true;
     expect((presenter as any).itemWeekly.text).to.include('25.0%');
-    expect((presenter as any).itemPause.text).to.equal('\u23F8\uFE0F');
   });
 });

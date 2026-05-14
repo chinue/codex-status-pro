@@ -25,7 +25,6 @@ function alignmentFromString(raw: string): vscode.StatusBarAlignment {
 export class StatusBarPresenter {
   private itemWeekly: vscode.StatusBarItem;
   private itemWindow: vscode.StatusBarItem;
-  private itemPause: vscode.StatusBarItem;
   private config = ConfigService.getInstance();
   private disposables: vscode.Disposable[] = [];
   private updateAnimInterval: NodeJS.Timeout | null = null;
@@ -51,12 +50,6 @@ export class StatusBarPresenter {
     this.itemWindow.command = 'codexStatusPro.refresh';
     this.itemWindow.show();
 
-    this.itemPause = vscode.window.createStatusBarItem(alignment, 102);
-    this.itemPause.name = 'CodexStatusPro Pause';
-    this.itemPause.command = 'codexStatusPro.togglePause';
-    this.itemPause.text = '\u23F8\uFE0F';
-    this.itemPause.show();
-
     const unsub = store.subscribe((state) => this.render(state));
     this.disposables.push({ dispose: unsub });
 
@@ -68,14 +61,14 @@ export class StatusBarPresenter {
     try {
       const locale = ConfigService.resolveEffectiveLanguage(state.ui.language);
       const t = makeT(locale);
-      // Pause icon: moon when paused (to indicate dormant), pause symbol when active
-      this.itemPause.text = state.ui.isPaused ? '\uD83C\uDF18' : '\u23F8\uFE0F';
-      this.itemPause.tooltip = state.ui.isPaused ? t('tooltip.resumeAutoRefresh') : t('tooltip.pauseAutoRefresh');
-
-      // When paused, hide data items and show only pause button
+      // When paused, show dormant indicator on the weekly item
       if (state.ui.isPaused) {
         this.stopUpdateAnimation();
-        this.itemWeekly.hide();
+        this.itemWeekly.text = `\uD83C\uDF18 ${this.displayName}: ${t('tooltip.paused')}`;
+        this.itemWeekly.command = 'codexStatusPro.togglePause';
+        this.itemWeekly.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+        this.itemWeekly.backgroundColor = undefined;
+        this.itemWeekly.show();
         this.itemWindow.hide();
         return;
       }
@@ -320,7 +313,11 @@ export class StatusBarPresenter {
 
     parts.push('---');
     parts.push('');
-    parts.push(`<span style="color:var(--vscode-descriptionForeground);font-size:11px;">${t('tooltip.lastUpdate')} ${state.lastFetchAt ? fmtDateTime(state.lastFetchAt) : '—'}</span>`);
+    const lastUpdateText = `${t('tooltip.lastUpdate')} ${state.lastFetchAt ? fmtDateTime(state.lastFetchAt) : '—'}`;
+    const pauseAction = state.ui.isPaused
+      ? `[${t('tooltip.resumeAutoRefresh')}](command:codexStatusPro.togglePause)`
+      : `[${t('tooltip.pauseAutoRefresh')}](command:codexStatusPro.togglePause)`;
+    parts.push(`<span style="color:var(--vscode-descriptionForeground);font-size:11px;">${lastUpdateText}</span>&nbsp;&nbsp;&nbsp;&nbsp;${pauseAction}`);
 
     md.appendMarkdown(parts.join('\n'));
     return md;
@@ -388,7 +385,7 @@ export class StatusBarPresenter {
     this.stopUpdateAnimation();
     this.itemWeekly.dispose();
     this.itemWindow.dispose();
-    this.itemPause.dispose();
+
     for (const d of this.disposables) { d.dispose(); }
   }
 }
