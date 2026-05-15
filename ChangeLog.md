@@ -1,5 +1,38 @@
 # ChangeLog
 
+## [0.5.12] - 2026-05-13
+
+### 改进
+
+- **localEstimate / quota 详情 Total 与总览 Size 保持一致**：
+  - `estimateStateMemory` 中为 `localEstimate`（1024 bytes）和 `quota`（512 bytes）生成 `detailEntries`，包含每个字段的精确估算 + `object overhead` 项
+  - Dashboard 中 `localEstimate` / `quota` 的展开详情改为统一读取 `memoryBreakdown.detailEntries` 渲染
+  - 详情页 Total 行累加值 = 总览表格 Size 列显示值，消除不一致
+
+## [0.5.11] - 2026-05-13
+
+### 改进
+
+- **非数组模块详情表格显示 object 并添加 Total**：
+  - `Store.localEstimate` / `Store.quota` 不再跳过 object 类型，value 显示为 `[object]`，bytes 估算为 256
+  - 每行根据实际类型估算 bytes：`number=8`、`boolean=4`、`string=2×length+8`、`null=0`
+  - 表格底部新增 **Total** 行，累加所有项的 bytes，方便与模块总大小验证
+  - `Store.storeOverhead` 同步添加 Total 行
+
+## [0.5.10] - 2026-05-13
+
+### 改进
+
+- **非数组模块详情表格统一添加 bytes (est.) 列**：`Store.localEstimate` 和 `Store.quota` 的展开详情表格新增第三列 `bytes (est.)`，每个字段估算 8 bytes，与 `Store.storeOverhead` 风格保持一致
+
+## [0.5.9] - 2026-05-13
+
+### 改进
+
+- **Dashboard Memory Usage 按钮间距优化**：内存标签 / 保存 / 保存全部 三个按钮间距从 8px 加大到 20px，减少误触
+- **Save All 按钮去掉图标**：纯文字显示，与其他按钮风格统一
+- **Store Overhead 展开详情增强**：不再只显示固定说明文本，改为显示详细的 component/value/bytes 表格，包含 activeProvider、displayMode、language、isPaused、authStatus、dataSource、listeners、reducer/dispatch 等 9 项 breakdown
+
 ## [0.5.8] - 2026-05-13
 
 ### 新增

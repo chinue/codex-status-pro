@@ -456,6 +456,7 @@ export interface MemoryBreakdownItem {
   name: string;
   bytes: number;
   description: string;
+  detailEntries?: Array<{ label: string; value: string; bytes?: number }>;
 }
 
 export interface MemoryBreakdown {
@@ -499,21 +500,51 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
 
   // 2. localEstimate
   const localEstimateBytes = state.localEstimate ? 1024 : 0;
-  if (localEstimateBytes > 0) {
+  if (localEstimateBytes > 0 && state.localEstimate) {
+    let fieldBytes = 0;
+    const detailEntries: Array<{ label: string; value: string; bytes: number }> = [];
+    for (const [k, v] of Object.entries(state.localEstimate)) {
+      let b: number;
+      if (v === null || v === undefined) { b = 0; }
+      else if (typeof v === 'number') { b = 8; }
+      else if (typeof v === 'boolean') { b = 4; }
+      else if (typeof v === 'string') { b = v.length * 2 + 8; }
+      else if (typeof v === 'object') { b = 256; }
+      else { b = 8; }
+      fieldBytes += b;
+      detailEntries.push({ label: k, value: String(v ?? ''), bytes: b });
+    }
+    detailEntries.push({ label: 'object overhead', value: 'V8 header + hidden class', bytes: localEstimateBytes - fieldBytes });
     items.push({
       name: 'Store.localEstimate',
       bytes: localEstimateBytes,
       description: 'Local estimate state (P/C/k + aggregated costs/tokens)',
+      detailEntries,
     });
   }
 
   // 3. quota
   const quotaBytes = state.quota ? 512 : 0;
-  if (quotaBytes > 0) {
+  if (quotaBytes > 0 && state.quota) {
+    let fieldBytes = 0;
+    const detailEntries: Array<{ label: string; value: string; bytes: number }> = [];
+    for (const [k, v] of Object.entries(state.quota)) {
+      let b: number;
+      if (v === null || v === undefined) { b = 0; }
+      else if (typeof v === 'number') { b = 8; }
+      else if (typeof v === 'boolean') { b = 4; }
+      else if (typeof v === 'string') { b = v.length * 2 + 8; }
+      else if (typeof v === 'object') { b = 256; }
+      else { b = 8; }
+      fieldBytes += b;
+      detailEntries.push({ label: k, value: String(v ?? ''), bytes: b });
+    }
+    detailEntries.push({ label: 'object overhead', value: 'V8 header + hidden class', bytes: quotaBytes - fieldBytes });
     items.push({
       name: 'Store.quota',
       bytes: quotaBytes,
       description: 'API quota data (limits / used / reset times)',
+      detailEntries,
     });
   }
 
@@ -532,6 +563,17 @@ export function estimateStateMemory(state: AppState | null): MemoryBreakdown {
     name: 'Store.storeOverhead',
     bytes: 2048,
     description: 'Store listeners, UI state, provider refs',
+    detailEntries: [
+      { label: 'activeProvider', value: state.activeProvider, bytes: 64 },
+      { label: 'displayMode', value: state.ui.displayMode, bytes: 32 },
+      { label: 'language', value: state.ui.language, bytes: 32 },
+      { label: 'isPaused', value: String(state.ui.isPaused), bytes: 16 },
+      { label: 'authStatus', value: state.authStatus, bytes: 32 },
+      { label: 'dataSource', value: state.dataSource, bytes: 32 },
+      { label: 'listeners (est.)', value: '2+', bytes: 512 },
+      { label: 'reducer + dispatch', value: 'internal', bytes: 512 },
+      { label: 'other internals', value: 'state refs, cache', bytes: 816 },
+    ],
   });
 
   // Sort by bytes descending

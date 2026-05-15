@@ -254,6 +254,7 @@ export interface MemoryBreakdownItem {
   name: string;
   bytes: number;
   description: string;
+  detailEntries?: Array<{ label: string; value: string; bytes?: number }>;
 }
 
 export interface DashboardUsageData {

@@ -743,10 +743,10 @@ export class DashboardPanel {
       </div>
     </div>
     <div class="memory-section" style="margin-top:10px;">
-      <span style="display:flex;align-items:center;gap:8px;">
+      <span style="display:flex;align-items:center;gap:20px;">
         <button class="detail-toggle" id="memory-toggle" style="font-size:0.85em;">🔺🖥️${i18n('dashboard.memoryUsage')}</button>
         <button class="detail-toggle" id="memory-save" style="font-size:0.85em;display:none;">💾</button>
-        <button class="detail-toggle" id="memory-save-all" style="font-size:0.85em;display:none;">💾 ${i18n('dashboard.saveAll')}</button>
+        <button class="detail-toggle" id="memory-save-all" style="font-size:0.85em;display:none;">${i18n('dashboard.saveAll')}</button>
       </span>
       <div id="memory-body" style="display:none;margin-top:8px;">
         <table class="ccu-table" id="memory-table">
@@ -1101,37 +1101,35 @@ export class DashboardPanel {
       } else if (name === 'Store.localEstimate' && usage.memoryLocalEstimate) {
         const maxH = (usage.memoryDetailDisplayMaxRows || 40) * 22;
         const cellMax = usage.memoryDetailCellMaxChars || 64;
-        body += '<div style="overflow-x:auto; max-height:' + maxH + 'px; overflow-y:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><tbody>';
-        for (const [k, v] of Object.entries(usage.memoryLocalEstimate)) {
-          const t = typeof v;
-          if (t !== 'number' && t !== 'string' && t !== 'boolean') continue;
-          const display = t === 'number'
-            ? (Number.isInteger(v) ? fmtNum(v) : (isFinite(v) ? Number(v).toFixed(4) : '0.0000'))
-            : String(v);
-          body += '<tr><td class="ccu-key">' + esc(k) + '</td><td class="ccu-num">' + esc(fmtCell(display, cellMax)) + '</td></tr>';
+        body += '<div style="overflow-x:auto; max-height:' + maxH + 'px; overflow-y:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><thead><tr><th>key</th><th>value</th><th>bytes (est.)</th></tr></thead><tbody>';
+        const item = usage.memoryBreakdown && usage.memoryBreakdown.find(i => i.name === name);
+        const entries = item && item.detailEntries ? item.detailEntries : [];
+        let totalBytes = 0;
+        for (const e of entries) {
+          totalBytes += e.bytes;
+          body += '<tr><td class="ccu-key">' + esc(fmtCell(e.label, cellMax)) + '</td><td class="ccu-num">' + esc(fmtCell(e.value, cellMax)) + '</td><td class="ccu-num">' + fmtNum(e.bytes) + '</td></tr>';
         }
+        body += '<tr style="font-weight:600;border-top:2px solid var(--vscode-panel-border);"><td class="ccu-key">Total</td><td></td><td class="ccu-num">' + fmtNum(totalBytes) + '</td></tr>';
         body += '</tbody></table></div>';
       } else if (name === 'Store.quota' && usage.memoryQuota) {
         const maxH = (usage.memoryDetailDisplayMaxRows || 40) * 22;
         const cellMax = usage.memoryDetailCellMaxChars || 64;
-        body += '<div style="overflow-x:auto; max-height:' + maxH + 'px; overflow-y:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><tbody>';
-        for (const [k, v] of Object.entries(usage.memoryQuota)) {
-          const t = typeof v;
-          if (t !== 'number' && t !== 'string' && t !== 'boolean') continue;
-          let display;
-          if (t === 'number') {
-            if (k.includes('At') && v > 1e12) {
-              display = fmtTimestamp(v);
-            } else if (Number.isInteger(v)) {
-              display = fmtNum(v);
-            } else {
-              display = isFinite(v) ? Number(v).toFixed(4) : '0.0000';
+        body += '<div style="overflow-x:auto; max-height:' + maxH + 'px; overflow-y:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><thead><tr><th>key</th><th>value</th><th>bytes (est.)</th></tr></thead><tbody>';
+        const item = usage.memoryBreakdown && usage.memoryBreakdown.find(i => i.name === name);
+        const entries = item && item.detailEntries ? item.detailEntries : [];
+        let totalBytes = 0;
+        for (const e of entries) {
+          totalBytes += e.bytes;
+          let display = e.value;
+          if (e.label.includes('At')) {
+            const num = Number(e.value);
+            if (!isNaN(num) && num > 1e12) {
+              display = fmtTimestamp(num);
             }
-          } else {
-            display = String(v);
           }
-          body += '<tr><td class="ccu-key">' + esc(k) + '</td><td class="ccu-num">' + esc(fmtCell(display, cellMax)) + '</td></tr>';
+          body += '<tr><td class="ccu-key">' + esc(fmtCell(e.label, cellMax)) + '</td><td class="ccu-num">' + esc(fmtCell(display, cellMax)) + '</td><td class="ccu-num">' + fmtNum(e.bytes) + '</td></tr>';
         }
+        body += '<tr style="font-weight:600;border-top:2px solid var(--vscode-panel-border);"><td class="ccu-key">Total</td><td></td><td class="ccu-num">' + fmtNum(totalBytes) + '</td></tr>';
         body += '</tbody></table></div>';
       } else if (name === 'Store.estHistory' && usage.estHistory && usage.estHistory.length > 0) {
         const x = usage.estHistory.length;
@@ -1165,7 +1163,22 @@ export class DashboardPanel {
         }
         body += '</tbody></table></div>';
       } else if (name === 'Store.storeOverhead') {
-        body += '<div style="padding:6px 8px;font-size:0.82em;color:var(--vscode-descriptionForeground);">' + esc(baseTitle) + '</div>';
+        const maxH = (usage.memoryDetailDisplayMaxRows || 40) * 22;
+        const cellMax = usage.memoryDetailCellMaxChars || 64;
+        body += '<div style="overflow-x:auto; max-height:' + maxH + 'px; overflow-y:auto;"><table class="ccu-table" style="margin:6px 0;font-size:0.82em;"><thead><tr><th>component</th><th>value</th><th>bytes (est.)</th></tr></thead><tbody>';
+        const overItem = usage.memoryBreakdown && usage.memoryBreakdown.find(i => i.name === name);
+        const entries = overItem && overItem.detailEntries ? overItem.detailEntries : [];
+        let totalBytes = 0;
+        for (const e of entries) {
+          body += '<tr>' +
+            '<td class="ccu-key">' + esc(fmtCell(e.label, cellMax)) + '</td>' +
+            '<td class="ccu-key">' + esc(fmtCell(e.value, cellMax)) + '</td>' +
+            '<td class="ccu-num">' + (e.bytes != null ? fmtNum(e.bytes) : '') + '</td>' +
+            '</tr>';
+          if (e.bytes != null) totalBytes += e.bytes;
+        }
+        body += '<tr style="font-weight:600;border-top:2px solid var(--vscode-panel-border);"><td class="ccu-key">Total</td><td></td><td class="ccu-num">' + fmtNum(totalBytes) + '</td></tr>';
+        body += '</tbody></table></div>';
       } else {
         body += '<div style="padding:6px 8px;font-size:0.82em;color:var(--vscode-descriptionForeground);">No detail available</div>';
       }
