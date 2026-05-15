@@ -3,6 +3,7 @@ out/
 bin/*.csv
 *.vsix
 .kimi/
+.skills/
 .tmp
 tmp
 *.code-workspace
